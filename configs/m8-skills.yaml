@@ -1,0 +1,41 @@
+schema_version: 1
+suite: m8-procedural-skills
+condition: memory-retrieval-skills
+seed: 406041616
+repetition: 1
+observation_mode: replay
+fixture:
+  save_id: PrimeStardewM3A_406041616
+  player: PrimeStardewSmoke
+  starting_date: {year: 1, season: spring, day: 8}
+tasks: [m3-water-crop-v1]
+provider:
+  provider: skill-contract
+  model: fixed-skill-model-v1
+  route: deterministic-replay
+  decoding: {temperature: 0, top_p: 1, max_output_tokens: 1024}
+context:
+  total_tokens: 4096
+  objective_tokens: 256
+  observation_tokens: 1536
+  goals_tokens: 128
+  memories_tokens: 512
+  skills_tokens: 1024
+  recent_events_tokens: 256
+learning:
+  recent_context: true
+  persistent_memory: true
+  retrieval: true
+  skills: true
+  refinement: false
+budget:
+  max_actions: 30
+  max_game_days: 1
+  max_model_calls: 10
+  max_input_tokens: 30000
+  max_output_tokens: 8000
+  max_cost_usd: 5
+  max_wall_seconds: 900
+tags: [m8, skills, watering, replay, rollback, ablation]
+metadata:
+  - {key: baseline, value: m7-glm-5.3-live}

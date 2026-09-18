@@ -40,6 +40,9 @@ prime-stardew-memory = "prime_stardew.memory_cli:main"
 prime-stardew-m7-gate = "prime_stardew.m7_gate:main"
 prime-stardew-m7-live = "prime_stardew.m7_live:main"
 
+prime-stardew-m8-gate = "prime_stardew.m8_gate:main"
+prime-stardew-m8-live = "prime_stardew.m8_live:main"
+
 [project.optional-dependencies]
 dev = [
   "pytest>=8.3,<10",
@@ -51,6 +54,7 @@ testpaths = ["tests"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/prime_stardew"]
+
 
 
 
