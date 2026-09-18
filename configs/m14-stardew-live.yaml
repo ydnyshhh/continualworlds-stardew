@@ -1,0 +1,42 @@
+schema_version: 1
+suite: m14-live-stardew-experimentation
+condition: active-sampling-versus-exploit-only
+seed: 406041616
+repetition: 1
+observation_mode: structured_local
+fixture:
+  save_id: PrimeStardewM14Active_406041616
+  player: PrimeStardewSmoke
+  starting_date: {year: 1, season: spring, day: 8}
+tasks: [m14-live-twig-yield-sampling-v1]
+provider:
+  provider: openrouter
+  model: z-ai/glm-5.3
+  route: prime-agent-rpc
+  decoding: {temperature: 0, top_p: 1, max_output_tokens: 400}
+context:
+  total_tokens: 2048
+  objective_tokens: 512
+  observation_tokens: 512
+  goals_tokens: 128
+  memories_tokens: 256
+  skills_tokens: 0
+  recent_events_tokens: 128
+learning:
+  recent_context: true
+  persistent_memory: true
+  retrieval: true
+  skills: false
+  refinement: true
+budget:
+  max_actions: 20
+  max_game_days: 1
+  max_model_calls: 2
+  max_input_tokens: 8000
+  max_output_tokens: 800
+  max_cost_usd: 1
+  max_wall_seconds: 900
+tags: [m14, live-stardew, noisy-sampling, glm-5.3]
+metadata:
+  - {key: fixture, value: disposable-spring8-twig-yield}
+
