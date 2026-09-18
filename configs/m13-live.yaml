@@ -1,0 +1,46 @@
+schema_version: 1
+suite: m13-experience-replay-live
+condition: agent-priority
+seed: 1301
+repetition: 0
+observation_mode: replay
+fixture:
+  save_id: m13-synthetic
+  player: ReplayResearcher
+  starting_date:
+    season: spring
+    day: 1
+    year: 1
+tasks:
+  - prioritize_experience_replay
+provider:
+  provider: openrouter
+  model: z-ai/glm-5.3
+  route: prime-agent-rpc
+  decoding:
+    temperature: 0
+    top_p: 1
+    max_output_tokens: 1800
+context:
+  total_tokens: 8192
+  objective_tokens: 512
+  observation_tokens: 2500
+  goals_tokens: 400
+  memories_tokens: 3000
+  skills_tokens: 200
+  recent_events_tokens: 500
+learning:
+  recent_context: true
+  persistent_memory: true
+  retrieval: true
+  skills: false
+  refinement: true
+budget:
+  max_actions: 3
+  max_game_days: 1
+  max_model_calls: 2
+  max_input_tokens: 12000
+  max_output_tokens: 3600
+  max_cost_usd: 0.10
+  max_wall_seconds: 600
+tags: [m13, experience-replay, authenticated]

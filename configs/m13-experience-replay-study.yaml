@@ -1,0 +1,22 @@
+schema_version: 1
+study_id: m13-experience-replay-v1
+hypothesis: Agent-prioritized replay improves held-out task accuracy over error-only replay under the same replay budget.
+primary_metric: held_out_accuracy
+favorable_direction: higher
+seeds: [1301, 1302, 1303, 1304, 1305, 1306, 1307, 1308]
+conditions:
+  - no_replay
+  - recency
+  - random_fixed_seed
+  - error_priority
+  - agent_priority
+replay_budget: 3
+alpha: 0.05
+bootstrap_samples: 10000
+exclusions:
+  - malformed or unverifiable event chain
+  - missing or duplicate terminal event
+  - replay-budget violation
+  - unmatched candidate or held-out evaluation hash
+  - hidden evaluation answer exposed to the replay policy
+analysis_plan: Pair agent-priority and error-priority accuracy by seed; report deterministic bootstrap confidence interval and exact two-sided sign test.
