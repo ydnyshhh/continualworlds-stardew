@@ -1,0 +1,40 @@
+schema_version: 1
+suite: m5-prime-atomic
+condition: bounded-context
+seed: 406041616
+repetition: 1
+observation_mode: replay
+fixture:
+  save_id: M5GateFixture_1
+  player: PrimeStardewSmoke
+  starting_date: {year: 1, season: spring, day: 8}
+tasks:
+  - m3-turn-move-v1
+  - m3-water-crop-v1
+  - m3-clear-debris-v1
+  - m3-harvest-crop-v1
+  - m3-chest-transfer-v1
+provider:
+  provider: prime-agent
+  model: configured-at-launch
+  route: rpc
+  decoding: {temperature: 0, top_p: 1, max_output_tokens: 512}
+context:
+  total_tokens: 2048
+  objective_tokens: 256
+  observation_tokens: 768
+  goals_tokens: 256
+  memories_tokens: 256
+  skills_tokens: 256
+  recent_events_tokens: 256
+budget:
+  max_actions: 20
+  max_game_days: 1
+  max_model_calls: 10
+  max_input_tokens: 20000
+  max_output_tokens: 4000
+  max_cost_usd: 5
+  max_wall_seconds: 1800
+tags: [m5, prime, rpc, atomic]
+metadata:
+  - {key: interface, value: prime-agent-rpc-jsonl}

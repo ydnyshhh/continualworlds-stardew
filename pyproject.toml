@@ -30,6 +30,9 @@ prime-stardew-retention = "prime_stardew.retention_cli:main"
 prime-stardew-experiment = "prime_stardew.experiment_cli:main"
 prime-stardew-m4-gate = "prime_stardew.m4_gate:main"
 
+prime-stardew-m5-gate = "prime_stardew.m5_gate:main"
+prime-stardew-m5-live = "prime_stardew.m5_live:main"
+
 [project.optional-dependencies]
 dev = [
   "pytest>=8.3,<10",
@@ -41,6 +44,7 @@ testpaths = ["tests"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/prime_stardew"]
+
 
 
 
