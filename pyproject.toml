@@ -33,6 +33,10 @@ prime-stardew-m4-gate = "prime_stardew.m4_gate:main"
 prime-stardew-m5-gate = "prime_stardew.m5_gate:main"
 prime-stardew-m5-live = "prime_stardew.m5_live:main"
 
+prime-stardew-m6-gate = "prime_stardew.m6_gate:main"
+prime-stardew-m6-live = "prime_stardew.m6_live:main"
+prime-stardew-memory = "prime_stardew.memory_cli:main"
+
 [project.optional-dependencies]
 dev = [
   "pytest>=8.3,<10",
@@ -44,6 +48,7 @@ testpaths = ["tests"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/prime_stardew"]
+
 
 
 

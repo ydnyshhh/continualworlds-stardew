@@ -1,0 +1,42 @@
+schema_version: 1
+suite: m6-memory-ablation
+condition: memory-plus-retrieval
+seed: 406041616
+repetition: 1
+observation_mode: replay
+fixture:
+  save_id: PrimeStardewM3A_406041616
+  player: PrimeStardewSmoke
+  starting_date: {year: 1, season: spring, day: 8}
+tasks: [m6-hidden-inventory-rule-v1]
+provider:
+  provider: m6-contract
+  model: fixed-memory-sensitive-model-v1
+  route: deterministic-replay
+  decoding: {temperature: 0, top_p: 1, max_output_tokens: 256}
+context:
+  total_tokens: 1024
+  objective_tokens: 128
+  observation_tokens: 256
+  goals_tokens: 64
+  memories_tokens: 96
+  skills_tokens: 0
+  recent_events_tokens: 96
+learning:
+  recent_context: true
+  persistent_memory: true
+  retrieval: true
+  skills: false
+  refinement: false
+budget:
+  max_actions: 2
+  max_game_days: 1
+  max_model_calls: 2
+  max_input_tokens: 5000
+  max_output_tokens: 500
+  max_cost_usd: 1
+  max_wall_seconds: 300
+tags: [m6, memory, retrieval, ablation]
+metadata:
+  - {key: baseline, value: m5-glm-5.3-live}
+
