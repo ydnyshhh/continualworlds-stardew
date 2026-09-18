@@ -23,6 +23,7 @@ ACTION_SCHEMAS: dict[str, str] = {
     "interact": "[]",
     "take_from_chest": "[chest_item_index: integer >= 0, quantity: integer > 0]",
     "put_to_chest": "[inventory_slot: integer 0..35, quantity: integer > 0]",
+    "execute_skill": "[skill_ref: string, followed by parameter values in declared order]",
 }
 
 

@@ -277,3 +277,6 @@ def _validate_action_arguments(name: str, arguments: tuple[object, ...]) -> None
         index, quantity = integers(2)
         if index not in range(36) or quantity <= 0:
             raise ValueError(f"put_to_chest requires {ACTION_SCHEMAS[name]}; got {arguments}")
+    elif name == "execute_skill":
+        if not arguments or not isinstance(arguments[0], str) or not arguments[0].strip():
+            raise ValueError(f"execute_skill requires {ACTION_SCHEMAS[name]}; got {arguments}")

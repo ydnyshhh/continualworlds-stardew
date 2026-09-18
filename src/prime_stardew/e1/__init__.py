@@ -13,6 +13,7 @@ from .models import (
 )
 from .memory_exposure import exposed_memory_tokens, select_memory_context
 from .live import E1LiveResult, LiveDaySummary, execute_guarded_action, run_live_days
+from .learning import E1LearningLifecycle, PausingProvider
 from .prime_adapter import PrimeHarnessAdapter, PrimeHarnessCheckpoint
 
 __all__ = [
@@ -20,6 +21,7 @@ __all__ = [
     "ConditionManifest", "E1Condition", "E1Phase", "E1StudyConfig",
     "HarnessCapabilities", "InferenceAccounting", "InferenceCategory",
     "E1LiveResult", "LiveDaySummary",
+    "E1LearningLifecycle", "PausingProvider",
     "LearningResetSpec", "LearningState", "MemoryExposurePolicy", "PERSISTENT_OBJECTIVE",
     "ProbeDefinition", "ProbeKind", "ProbePoint", "ProbeSchedule", "ProbeTaskScore",
     "PhysicalDisposableBranch", "PhysicalProbeBranchManager",

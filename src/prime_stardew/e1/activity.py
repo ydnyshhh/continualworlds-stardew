@@ -26,7 +26,10 @@ def segment_live_competencies(records: Iterable[EventRecord]) -> tuple[Competenc
         elif current_day is not None and record.event_type == "agent_decision":
             by_day[current_day]["decisions"].append(record.payload["decision"])
         elif current_day is not None and record.event_type == "action_completed":
-            if record.payload.get("name") != "sleep":
+            if (
+                record.payload.get("name") != "sleep"
+                and record.payload.get("task_id") == "e1-broad-objective"
+            ):
                 by_day[current_day]["actions"].append(record.payload)
         elif record.event_type == "e1_live_day_completed":
             current_day = None

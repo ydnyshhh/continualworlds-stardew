@@ -49,6 +49,7 @@ def run_live_days(
     days: int,
     max_decisions_per_day: int = 8,
     on_day_complete: Callable[[LiveDaySummary], None] | None = None,
+    on_learning_boundary: Callable[[int], None] | None = None,
 ) -> E1LiveResult:
     if days < 1 or days > 119:
         raise ValueError("Live E1 horizon must be between 1 and 119 days")
@@ -68,9 +69,12 @@ def run_live_days(
         recent_events: list[dict[str, str]] = []
         for _ in range(max_decisions_per_day):
             observation = controller.observe(radius=2)
+            allowed_actions = E1_LIVE_ACTIONS + (
+                ("execute_skill",) if harness.export_learning_state().active_skill_refs else ()
+            )
             decision = harness.decide({
                 "state": observation.model_dump(mode="json"),
-                "allowed_actions": E1_LIVE_ACTIONS,
+                "allowed_actions": allowed_actions,
                 "game_day": observation.game_state.date.ordinal(),
                 "season": observation.game_state.date.season,
                 "recent_events": recent_events[-8:],
@@ -80,17 +84,44 @@ def run_live_days(
             if not actions:
                 break
             for action in actions:
-                primitive_count += 1
-                outcome = execute_guarded_action(
-                    controller, runner, action,
-                    action_id=f"d{elapsed_day}-m{decision_count}-a{primitive_count}",
+                expanded = (
+                    harness.expand_skill(tuple(action.get("arguments", ())))
+                    if action.get("name") == "execute_skill" else None
                 )
-                if not outcome["succeeded"]:
-                    failed_count += 1
-                recent_events.append({
-                    "id": str(outcome["action_id"]),
-                    "text": str(outcome),
-                })
+                primitive_actions = (
+                    [item.model_dump(mode="json") for item in expanded]
+                    if expanded is not None else [action]
+                )
+                if expanded is not None:
+                    skill_ref = str(action["arguments"][0])
+                    skill_use_id = (
+                        f"d{elapsed_day}-m{decision_count}-skill-{primitive_count + 1}"
+                    )
+                    runner.events.append("e1_skill_invoked", {
+                        "game_day": elapsed_day,
+                        "skill_ref": skill_ref,
+                        "primitive_actions": len(primitive_actions),
+                    })
+                skill_succeeded = True
+                for primitive in primitive_actions:
+                    primitive_count += 1
+                    outcome = execute_guarded_action(
+                        controller, runner, primitive,
+                        action_id=f"d{elapsed_day}-m{decision_count}-a{primitive_count}",
+                    )
+                    if not outcome["succeeded"]:
+                        failed_count += 1
+                        skill_succeeded = False
+                    recent_events.append({
+                        "id": str(outcome["action_id"]),
+                        "text": str(outcome),
+                    })
+                if expanded is not None:
+                    harness.record_skill_use(
+                        skill_ref, use_id=skill_use_id,
+                        success=skill_succeeded,
+                        primitive_actions=len(primitive_actions),
+                    )
         pre_sleep = controller.observe(radius=2)
         runner.events.append("e1_live_day_pre_sleep", {
             "elapsed_day": elapsed_day,
@@ -103,6 +134,8 @@ def run_live_days(
             runner, action_id=f"d{elapsed_day}-sleep", name="sleep", arguments=(),
             result=day_result.sleep_action,
         )
+        if on_learning_boundary is not None:
+            on_learning_boundary(elapsed_day)
         harness.end_day(game_day=elapsed_day)
         summary = LiveDaySummary(
             elapsed_day=elapsed_day,
@@ -142,12 +175,13 @@ def execute_guarded_action(
     action: dict[str, Any],
     *,
     action_id: str,
+    task_id: str = "e1-broad-objective",
 ) -> dict[str, Any]:
     name = str(action.get("name", ""))
     arguments = tuple(action.get("arguments", ()))
     runner.assert_action_allowed(count=1)
     started = {
-        "task_id": "e1-broad-objective", "action_id": action_id,
+        "task_id": task_id, "action_id": action_id,
         "name": name, "arguments": list(arguments),
     }
     runner.events.append("action_started", started)
@@ -162,7 +196,7 @@ def execute_guarded_action(
         return payload
     return _record_action_result(
         runner, action_id=action_id, name=name, arguments=arguments, result=result,
-        started=False,
+        started=False, task_id=task_id,
     )
 
 
@@ -196,10 +230,11 @@ def _record_action_result(
     arguments: tuple[object, ...],
     result: ActionResult | MovementResult,
     started: bool = True,
+    task_id: str = "e1-broad-objective",
 ) -> dict[str, Any]:
     action_result = result.action if isinstance(result, MovementResult) else result
     base = {
-        "task_id": "e1-broad-objective", "action_id": action_id,
+        "task_id": task_id, "action_id": action_id,
         "name": name, "arguments": list(arguments),
     }
     if started:

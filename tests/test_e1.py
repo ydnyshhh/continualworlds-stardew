@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 from prime_stardew.agent import PrimeSession, ScriptedProvider
+from prime_stardew.agent.models import ProviderResponse, ProviderUsage
 from prime_stardew.e1 import (
     BranchType, CompetencyDomain, CompetencyInstance, E1Condition, HarnessCapabilities,
     LearningResetSpec, LearningState, MemoryExposurePolicy, ProbeDefinition, ProbeKind,
@@ -39,6 +40,8 @@ from prime_stardew.e1.harness import HarnessContractError
 from prime_stardew.e1.prime_adapter import PrimeHarnessAdapter
 from prime_stardew.e1.live import run_live_days
 from prime_stardew.e1.activity import segment_live_competencies
+from prime_stardew.e1.learning import E1LearningLifecycle
+from prime_stardew.skills import SkillStore
 
 
 E1_PROVENANCE = RunProvenance(
@@ -81,12 +84,68 @@ def _prime_adapter(
     )
     runner = ExperimentRunner(tmp_path / f"runs-{condition.value}", config, E1_PROVENANCE)
     session = PrimeSession(runner, ScriptedProvider(responses), memory_store=memory)
-    skill_context = {"routine:v1": "Perform the validated routine."} if manifest.capabilities.procedural_skills else None
-    learning = LearningState(active_skill_refs=("routine:v1",)) if skill_context else None
+    skills = SkillStore(tmp_path / f"skills-{condition.value}.sqlite3") if manifest.capabilities.procedural_skills else None
     return PrimeHarnessAdapter(
         session, manifest, memory_token_budget=50,
-        skill_context=skill_context, learning_state=learning,
+        skill_store=skills,
+        runtime_capabilities=manifest.capabilities,
     )
+
+
+class E1LifecycleProvider:
+    def __init__(self) -> None:
+        self.requests = []
+
+    def complete(self, request):
+        self.requests.append(request)
+        if request.call_id.startswith("decision"):
+            value = {
+                "schema_version": 1,
+                "actions": [{"name": "turn", "arguments": [1]}],
+                "goal_updates": [], "memory_notes": [], "rationale": "repeat safe turn",
+            }
+        elif request.call_id.startswith("e1-skill-proposal"):
+            sources_text = request.prompt.split("[source_trajectory_ids]\n", 1)[1].split("\n", 1)[0]
+            sources = json.loads(sources_text)
+            value = {
+                "skill": {
+                    "schema_version": 1, "skill_id": "repeat-safe-turn", "version": 1,
+                    "name": "Repeat safe turn", "description": "Turn east using a validated macro.",
+                    "task_kind": "recurring-live-pattern", "parameters": [],
+                    "preconditions": ["Turning is permitted"],
+                    "postconditions": ["Player faces east"],
+                    "steps": [{"action": "turn", "arguments": [{"literal": 1}]}],
+                    "source_trajectory_ids": sources,
+                },
+                "rationale": "The successful primitive sequence repeated exactly.",
+            }
+        elif request.call_id.startswith("reflection"):
+            selected_text = request.prompt.split("[selected_evidence]\n", 1)[1].split(
+                "\n[current_active_beliefs]", 1
+            )[0]
+            selected = json.loads(selected_text)
+            value = {
+                "schema_version": 1,
+                "lessons": ["The east-facing turn completed without failure."],
+                "failed_assumptions": [], "counterfactuals": [],
+                "goals": ["Reuse validated routines when applicable"],
+                "beliefs": [],
+            }
+            assert selected
+        else:  # pragma: no cover
+            raise AssertionError(request.call_id)
+        text = json.dumps(value)
+        return ProviderResponse(
+            text=text, request_id=f"lifecycle-{len(self.requests)}",
+            provider="scripted", model="e1-lifecycle", route="test",
+            usage=ProviderUsage(
+                input_tokens=request.estimated_input_tokens,
+                output_tokens=max(1, len(text) // 4), latency_ms=0, cost_usd=0,
+            ),
+        )
+
+    def close(self):
+        return None
 
 
 def test_condition_capability_matrix_is_cumulative_and_b_differs_only_by_retrieval() -> None:
@@ -231,6 +290,10 @@ def test_live_activity_segmentation_uses_events_and_observation_deltas(tmp_path:
         "task_id": "e1-broad-objective", "action_id": "a1", "name": "use",
         "arguments": [], "succeeded": True, "request_id": "r1", "privileged": False,
     })
+    events.append("action_completed", {
+        "task_id": "e1-skill-validation", "action_id": "validation-a1", "name": "use",
+        "arguments": [], "succeeded": True, "request_id": "r2", "privileged": False,
+    })
     events.append("e1_live_day_pre_sleep", {"elapsed_day": 1, "observation": end})
     events.append("e1_live_day_completed", {"elapsed_day": 1})
     instances = segment_live_competencies(events.iter_records())
@@ -240,6 +303,56 @@ def test_live_activity_segmentation_uses_events_and_observation_deltas(tmp_path:
     assert instance.model_decisions == 1 and instance.primitive_actions == 1
     assert instance.game_minutes == 60 and instance.energy_used == 2
     assert instance.domain_metrics["segmentation"] == "evaluator_event_heuristic_v1"
+
+
+def test_condition_f_nightly_learning_creates_validates_and_activates_skill_and_refines(
+    tmp_path: Path,
+) -> None:
+    memory = MemoryStore(tmp_path / "f-memory.sqlite3")
+    adapter = _prime_adapter(tmp_path, E1Condition.F_FULL, [], memory=memory)
+    provider = E1LifecycleProvider()
+    adapter.session.provider = provider
+    lifecycle = E1LearningLifecycle(
+        harness=adapter, provider=provider,
+        skill_store=adapter.skill_store,
+        disposable_skill_validator=lambda _: True,
+    )
+    adapter.start(objective=PERSISTENT_OBJECTIVE, run_id=adapter.session.runner.run_id)
+    for day in (1, 2):
+        decision = adapter.decide({
+            "state": {"day": day}, "allowed_actions": ["turn"],
+            "game_day": day, "season": "spring",
+        })
+        adapter.session.runner.events.append("action_completed", {
+            "task_id": "e1-broad-objective", "action_id": f"d{day}-a1",
+            "name": "turn", "arguments": [1], "succeeded": True,
+            "request_id": f"turn-{day}", "privileged": False,
+        })
+        adapter.session.runner.events.append("e1_live_day_pre_sleep", {
+            "elapsed_day": day, "observation": {"day": day},
+        })
+        assert decision["actions"][0]["name"] == "turn"
+        lifecycle.end_day(day)
+        adapter.end_day(game_day=day)
+    state = adapter.export_learning_state()
+    assert state.active_skill_refs == ("repeat-safe-turn:v1",)
+    assert len(state.active_refinement_ids) == 2
+    commands = adapter.expand_skill(("repeat-safe-turn:v1",))
+    assert [(item.name, item.arguments) for item in commands] == [("turn", (1,))]
+    adapter.record_skill_use(
+        "repeat-safe-turn:v1", use_id="e1-test-use", success=True,
+        primitive_actions=len(commands),
+    )
+    assert adapter.skill_store.uses("repeat-safe-turn")[0].model_decisions_saved == 0
+    assert adapter.session.state.active_goals == ("Reuse validated routines when applicable",)
+    categories = [
+        event.payload["category"] for event in adapter.session.runner.events.iter_records()
+        if event.event_type == "e1_inference_accounted"
+    ]
+    assert "skill_proposal" in categories and categories.count("reflection") == 2
+    assert adapter.skill_store is not None
+    adapter.skill_store.close()
+    memory.close()
 
 
 def test_prime_adapter_checkpoint_restore_and_branch_reset_deactivate_memory(tmp_path: Path) -> None:

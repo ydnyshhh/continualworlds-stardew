@@ -87,7 +87,7 @@ full_harness_features:
   reflection: true
   persistent_goal_manager: true
   adaptive_tool_selection: true
-  native_compaction: true
+  native_compaction: false
   subagents: false
 primary_metric: standardized_probe_aulc
 alpha: 0.05

@@ -5,13 +5,15 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import shutil
 from pathlib import Path
 
 from .agent import PrimeRpcProvider, PrimeSession
 from .e1.activity import segment_live_competencies
 from .e1.conditions import condition_manifest
 from .e1.config import load_e1_config, materialize_run_config
-from .e1.live import run_live_days
+from .e1.live import execute_guarded_action, run_live_days
+from .e1.learning import E1LearningLifecycle
 from .e1.models import E1Condition, E1Phase, PERSISTENT_OBJECTIVE
 from .e1.prime_adapter import PrimeHarnessAdapter
 from .env.checkpoints import CheckpointManager
@@ -25,11 +27,7 @@ from .experiments.provenance import artifact_sha256
 from .experiments.runner import ExperimentRunner
 from .m8_gate import _provenance
 from .memory import MemoryStore
-
-
-SUPPORTED_CONDITIONS = {
-    E1Condition.A_BASE, E1Condition.B_MEMORY, E1Condition.C_RETRIEVAL,
-}
+from .skills import SkillStore, compile_skill
 
 
 def main() -> None:
@@ -60,13 +58,11 @@ def main() -> None:
     study, study_digest = load_e1_config(args.config)
     if study.phase is not E1Phase.SMOKE:
         raise RuntimeError("The live smoke command requires an E1 smoke configuration")
-    if args.condition not in SUPPORTED_CONDITIONS:
-        raise RuntimeError(
-            f"Condition {args.condition.value} is not live-enabled yet: versioned skill creation "
-            "and nightly reflection must be connected before D/E/F can make valid claims"
-        )
     seed = args.seed if args.seed is not None else study.seeds[0]
     base = materialize_run_config(study, args.condition, seed)
+    manifest = condition_manifest(
+        args.condition, full_harness_features=study.full_harness_features,
+    )
     game_checkpoints = CheckpointManager(args.saves_root)
     canonical = game_checkpoints.verify(args.canonical_checkpoint)
     if canonical.player != base.fixture.player or canonical.game_date != base.fixture.starting_date:
@@ -104,13 +100,71 @@ def main() -> None:
         MemoryStore(root / "state" / runner.run_id / "memory.sqlite3")
         if config.learning.persistent_memory else None
     )
-    session = PrimeSession(runner, provider, pause_controller=client, memory_store=memory)
-    manifest = condition_manifest(
-        args.condition, full_harness_features=study.full_harness_features,
+    skills = (
+        SkillStore(root / "state" / runner.run_id / "skills.sqlite3")
+        if manifest.capabilities.procedural_skills else None
     )
+    session = PrimeSession(runner, provider, pause_controller=client, memory_store=memory)
     harness = PrimeHarnessAdapter(
         session, manifest, memory_token_budget=study.memory_token_budget,
+        skill_store=skills, runtime_capabilities=manifest.capabilities,
     )
+
+    def validate_skill_disposable(skill) -> bool:
+        date = controller.observe().game_state.date
+        validation_root = root / "skill-validation" / runner.run_id
+        checkpoint_path = validation_root / f"{skill.skill_id}-v{skill.version}"
+        checkpoint = game_checkpoints.create(
+            config.fixture.save_id, checkpoint_path,
+            player=config.fixture.player, game_date=date,
+            environment={
+                "purpose": "E1 disposable skill validation",
+                "study_config_sha256": study_digest,
+                "condition": args.condition.value,
+            },
+        )
+        suffix = skill.content_sha256()[:8]
+        branch_save_id = f"PrimeStardewE1Val{args.condition.value}{skill.version}{suffix}"
+        branch_path = game_checkpoints.restore(checkpoint_path, branch_save_id)
+        succeeded = False
+        try:
+            controller.load(branch_save_id, expected_date=date)
+            commands = compile_skill(skill, {}, allowed_actions=tuple({
+                "move", "move_relative", "move_step", "turn", "choose_item", "use",
+                "interact", "take_from_chest", "put_to_chest",
+            }))
+            outcomes = [
+                execute_guarded_action(
+                    controller, runner, command.model_dump(mode="json"),
+                    action_id=f"skill-validation-{skill.skill_id}-v{skill.version}-a{index}",
+                    task_id="e1-skill-validation",
+                )
+                for index, command in enumerate(commands, 1)
+            ]
+            succeeded = bool(outcomes) and all(item["succeeded"] for item in outcomes)
+        finally:
+            controller.load(config.fixture.save_id, expected_date=date)
+            resolved = branch_path.resolve()
+            saves_root = game_checkpoints.saves_root.resolve()
+            if not resolved.is_relative_to(saves_root) or resolved == saves_root:
+                raise RuntimeError("Disposable skill branch escaped the saves root")
+            if resolved.exists():
+                shutil.rmtree(resolved)
+            game_checkpoints.verify(checkpoint_path)
+        runner.events.append("e1_skill_disposable_validation", {
+            "skill_id": skill.skill_id, "version": skill.version,
+            "success": succeeded, "checkpoint_id": checkpoint.checkpoint_id,
+            "checkpoint_sha256": artifact_sha256(checkpoint.model_dump(mode="json")),
+            "parent_save_id": config.fixture.save_id,
+        })
+        return succeeded
+
+    learning_lifecycle = E1LearningLifecycle(
+        harness=harness, provider=provider, skill_store=skills, pause_controller=client,
+        disposable_skill_validator=(
+            validate_skill_disposable if manifest.capabilities.procedural_skills else None
+        ),
+    ) if (manifest.capabilities.procedural_skills or manifest.capabilities.reflection) else None
     checkpoints = RunCheckpointManager(game_checkpoints)
 
     def checkpoint_day(summary) -> None:
@@ -135,6 +189,7 @@ def main() -> None:
                 "condition_manifest": manifest.model_dump(mode="json"),
             },
             memory_database=memory.path if memory is not None else None,
+            learning_databases={"skills": skills.path} if skills is not None else None,
         )
 
     try:
@@ -144,6 +199,9 @@ def main() -> None:
             harness, controller, days=study.horizon_days,
             max_decisions_per_day=args.max_decisions_per_day,
             on_day_complete=checkpoint_day,
+            on_learning_boundary=(
+                learning_lifecycle.end_day if learning_lifecycle is not None else None
+            ),
         )
         competencies = segment_live_competencies(runner.events.iter_records())
         runner.transition(
@@ -179,6 +237,8 @@ def main() -> None:
         session.close()
         if memory is not None:
             memory.close()
+        if skills is not None:
+            skills.close()
         try:
             client.raw("exit_menu", idempotent=False)
         except Exception:

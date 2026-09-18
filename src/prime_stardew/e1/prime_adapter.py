@@ -14,6 +14,9 @@ from prime_stardew.agent import AgentSessionState, ContextInputs, ContextItem, P
 from prime_stardew.experiments.lifecycle import RunPhase
 from prime_stardew.experiments.provenance import artifact_sha256
 from prime_stardew.memory import MemoryKind, MemoryQuery
+from prime_stardew.skills import (
+    SAFE_ACTIONS, SkillDefinition, SkillStore, SkillUseMetrics, compile_skill,
+)
 
 from .branches import reset_learning_state
 from .conditions import learning_config
@@ -47,18 +50,20 @@ class PrimeHarnessAdapter:
         skill_context: dict[str, str] | None = None,
         learning_state: LearningState | None = None,
         runtime_capabilities: HarnessCapabilities | None = None,
+        skill_store: SkillStore | None = None,
     ) -> None:
         self.session = session
         self.manifest = manifest
         self.memory_token_budget = memory_token_budget
         self.skill_context = dict(skill_context or {})
+        self.skill_store = skill_store
         self._learning_state = learning_state or LearningState()
         self._runtime_capabilities = runtime_capabilities or HarnessCapabilities(
             persistent_memory=session.memory_store is not None,
             relevance_retrieval=(
                 session.memory_store is not None and manifest.capabilities.relevance_retrieval
             ),
-            procedural_skills=bool(self.skill_context),
+            procedural_skills=skill_store is not None,
         )
         self._objective: str | None = None
         self._run_id: str | None = None
@@ -228,6 +233,97 @@ class PrimeHarnessAdapter:
         })
         return updated
 
+    def register_active_skill(self, skill: SkillDefinition) -> None:
+        if self.skill_store is None:
+            raise HarnessContractError("Cannot register a skill without a SkillStore")
+        active = self.skill_store.active(skill.skill_id)
+        if active is None or active.version != skill.version:
+            raise HarnessContractError("Only the active validated skill version may be registered")
+        skill_ref = f"{skill.skill_id}:v{skill.version}"
+        self.skill_context[skill_ref] = json.dumps({
+            "description": skill.description,
+            "preconditions": list(skill.preconditions),
+            "postconditions": list(skill.postconditions),
+            "parameters": [item.model_dump(mode="json") for item in skill.parameters],
+            "invocation": ["execute_skill", skill_ref],
+        }, sort_keys=True)
+        self._learning_state = self._learning_state.model_copy(update={
+            "active_skill_refs": tuple(dict.fromkeys((
+                *self._learning_state.active_skill_refs, skill_ref,
+            ))),
+            "historical_artifact_ids": tuple(dict.fromkeys((
+                *self._learning_state.historical_artifact_ids, skill_ref,
+            ))),
+        })
+        self.session.runner.events.append("e1_skill_registered", {
+            "skill_ref": skill_ref, "content_sha256": skill.content_sha256(),
+        })
+
+    def expand_skill(self, arguments: tuple[object, ...]) -> tuple[Any, ...]:
+        if self.skill_store is None or not arguments or not isinstance(arguments[0], str):
+            raise HarnessContractError("Invalid E1 skill invocation")
+        skill_ref = arguments[0]
+        if skill_ref not in self._learning_state.active_skill_refs:
+            raise HarnessContractError(f"Skill is not active in this branch: {skill_ref}")
+        try:
+            skill_id, raw_version = skill_ref.rsplit(":v", 1)
+            version = int(raw_version)
+        except ValueError as exc:
+            raise HarnessContractError(f"Invalid skill reference: {skill_ref}") from exc
+        skill = self.skill_store.get(skill_id, version)
+        active = self.skill_store.active(skill_id)
+        if skill is None or active is None or active.version != version:
+            raise HarnessContractError(f"Skill store does not expose active version: {skill_ref}")
+        values = arguments[1:]
+        if len(values) != len(skill.parameters):
+            raise HarnessContractError("Skill invocation parameter count differs from its schema")
+        parameters = {item.name: value for item, value in zip(skill.parameters, values, strict=True)}
+        return compile_skill(skill, parameters, allowed_actions=tuple(SAFE_ACTIONS))
+
+    def record_skill_use(
+        self,
+        skill_ref: str,
+        *,
+        use_id: str,
+        success: bool,
+        primitive_actions: int,
+    ) -> None:
+        if self.skill_store is None:
+            raise HarnessContractError("Cannot record skill use without a SkillStore")
+        try:
+            skill_id, raw_version = skill_ref.rsplit(":v", 1)
+            version = int(raw_version)
+        except ValueError as exc:
+            raise HarnessContractError(f"Invalid skill reference: {skill_ref}") from exc
+        metrics = SkillUseMetrics(
+            use_id=use_id, skill_id=skill_id, version=version,
+            success=success, score=float(success),
+            baseline_model_decisions=1, actual_model_decisions=1,
+            baseline_primitive_actions=primitive_actions,
+            actual_primitive_actions=primitive_actions,
+        )
+        self.skill_store.record_use(metrics)
+        self.session.runner.record_skill_use(
+            use_id, skill=skill_id, version=str(version),
+            success=success, score=metrics.score,
+            model_decisions_saved=metrics.model_decisions_saved,
+            primitive_actions_saved=metrics.primitive_actions_saved,
+        )
+
+    def register_refinement(self, refinement_id: str, goals: tuple[str, ...]) -> None:
+        self._learning_state = self._learning_state.model_copy(update={
+            "active_refinement_ids": tuple(dict.fromkeys((
+                *self._learning_state.active_refinement_ids, refinement_id,
+            ))),
+            "historical_artifact_ids": tuple(dict.fromkeys((
+                *self._learning_state.historical_artifact_ids, refinement_id,
+            ))),
+        })
+        if goals:
+            self.session.state = self.session.state.model_copy(update={
+                "active_goals": tuple(goals),
+            })
+
     def _validate_runtime_contract(self) -> None:
         if self.capabilities != self.manifest.capabilities:
             raise HarnessContractError(
@@ -241,8 +337,10 @@ class PrimeHarnessAdapter:
             )
         if self.session.runner.config.context.memories_tokens != self.memory_token_budget:
             raise HarnessContractError("Prime runtime memory budget differs from the E1 study budget")
-        if self.manifest.capabilities.procedural_skills and not self.skill_context:
-            raise HarnessContractError("The condition enables skills but no versioned skill context was supplied")
+        if self.manifest.capabilities.persistent_memory and self.session.memory_store is None:
+            raise HarnessContractError("The condition enables memory but no MemoryStore was supplied")
+        if self.manifest.capabilities.procedural_skills and self.skill_store is None:
+            raise HarnessContractError("The condition enables skills but no SkillStore was supplied")
 
     def _assert_started(self) -> None:
         if self._objective is None or self._run_id is None:

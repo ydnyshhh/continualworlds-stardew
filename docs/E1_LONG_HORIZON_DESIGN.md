@@ -8,10 +8,10 @@ mechanism causes any improvement.
 
 The `e1-offline` runner validates contracts, event reconstruction, probe isolation, reset semantics,
 and reporting. Its synthetic probe values are deliberately identical across conditions and support
-no scientific conclusions. The guarded live runner now supports authenticated seven-day A–C smoke
-runs from condition-specific restores of one immutable canonical checkpoint. D–F stay disabled until
-skill creation and nightly reflection are integrated. E1-Pilot begins only after all six smoke
-conditions and the live persistent-lifetime runner pass their gates.
+no scientific conclusions. The guarded live runner supports authenticated seven-day A–F smoke runs
+from condition-specific restores of one immutable canonical checkpoint. D–F connect versioned skill
+creation and nightly reflection directly to the same broad-objective loop used by A–C. E1-Pilot
+begins only after all six smoke conditions and the live persistent-lifetime runner pass their gates.
 
 ## Research questions
 
@@ -69,7 +69,7 @@ immutable manifest below to E:
 ```yaml
 persistent_goal_manager: true
 adaptive_tool_selection: true
-native_compaction: true
+native_compaction: false
 subagents: false
 ```
 
@@ -176,14 +176,21 @@ belief-quality machinery.
 
 The new E1 package supplies the condition matrix, harness contract, branch identity, reset schema,
 competency events, probe scoring, AULC, raw-event contract validation, and condition-faithful B/C
-memory exposure. Combined checkpoints now capture and restore named learning SQLite databases in
-addition to the game, agent, configuration, event cursor, and memory database. Remaining work before
-the real pilot is broad-objective integration of versioned skill creation and nightly reflection,
-authenticated seven-day D–F smoke runs, all-condition cost review, and pilot preregistration. The
-Prime adapter enforces exact runtime capabilities, and evaluator-side activity segmentation derives
-competency instances from raw actions and observation deltas. Physical probe lifecycle orchestration restores combined
-checkpoints into isolated save and SQLite paths, verifies the immutable parent, and removes the
-registered branch artifacts after scoring.
+memory exposure. Combined checkpoints capture and restore named learning SQLite databases in
+addition to the game, agent, configuration, event cursor, and memory database. D–F observe
+authenticated broad-objective decisions, propose immutable literal skills only after a successful
+pattern repeats, require exact source citations, validate the primitive expansion in replay and on a
+disposable save branch, then expose only the active version to later decisions. The nightly E/F
+boundary runs M7 evidence-linked reflection and persists its lessons and goals. Skill proposal and
+reflection calls receive separate cost attribution. Disposable validation actions carry their own
+task identity, so they cannot become competency evidence or future skill-training examples.
+
+Remaining work before the real pilot is executing authenticated seven-day D–F smoke runs,
+all-condition cost review, live persistent-lifetime validation, and pilot preregistration. The Prime
+adapter enforces exact runtime capabilities, and evaluator-side activity segmentation derives
+competency instances from raw actions and observation deltas. Physical probe lifecycle orchestration
+restores combined checkpoints into isolated save and SQLite paths, verifies the immutable parent,
+and removes the registered branch artifacts after scoring.
 
 ## Reporting and interpretation
 
