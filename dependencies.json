@@ -1,0 +1,35 @@
+{
+  "stardojo": {
+    "repository": "https://github.com/StarDojo2025/stardojo.git",
+    "commit": "e251401cf1e84ba07cbfa08283a7aba52290e578",
+    "checkout": "vendor/stardojo",
+    "mod_version": "1.0.0",
+    "installed_binary_source": "https://www.nexusmods.com/stardewvalley/mods/34175?tab=files",
+    "installed_archive_sha256": "35dca5a1579163cfdba913ab833b73b19a33528cc29bb578fbb52eeb1ae23946",
+    "patched_dll_sha256": "6fffa01cdba2b8db5d3c1e008969f05bad9a2730bc2e93c1f8cc2c403d87506b",
+    "runtime_status": "validated on Stardew Valley 1.6.15: socket, structured observation, action mutation, pause/resume, day transition, save, and checkpoint reload"
+  },
+  "smapi": {
+    "candidate_version": "4.5.2",
+    "status": "installed and validated with the patched StarDojo build",
+    "source": "https://smapi.io/"
+  },
+  "dotnet_sdk": {
+    "version": "8.0.425",
+    "directory": "runtime/dotnet"
+  },
+  "prime_agent": {
+    "version": "0.9.5",
+    "interface": "JSONL RPC",
+    "directory": "runtime/prime-agent",
+    "package_json_sha256": "519510c1665dfbb0a1b3ff048b453143ac91bdf71922fdce757aba78a6a9a54c",
+    "source": "https://app.primeintellect.ai/prime-agent/install.sh",
+    "status": "installed locally; RPC get_state probe passed; provider authentication pending"
+  },
+  "prime_agent_node": {
+    "version": "22.23.2",
+    "directory": "runtime/prime-bootstrap/node-v22.23.2-win-x64",
+    "archive_sha256": "1177b4137ba5adaa56354ae40f1080c7450e8ae09cecb47da459d1c52ac99f97",
+    "source": "https://nodejs.org/download/release/v22.23.2/node-v22.23.2-win-x64.zip"
+  }
+}
