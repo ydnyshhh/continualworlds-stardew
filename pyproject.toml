@@ -22,6 +22,9 @@ prime-stardew-control-smoke = "prime_stardew.control_smoke:main"
 prime-stardew-farming-smoke = "prime_stardew.farming_smoke:main"
 prime-stardew-movement-guard-smoke = "prime_stardew.movement_guard_smoke:main"
 
+prime-stardew-checkpoint = "prime_stardew.checkpoint_cli:main"
+prime-stardew-recovery-probe = "prime_stardew.recovery_probe:main"
+
 [project.optional-dependencies]
 dev = [
   "pytest>=8.3,<10",
@@ -33,4 +36,5 @@ testpaths = ["tests"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/prime_stardew"]
+
 
