@@ -1,0 +1,101 @@
+schema_version: 1
+study_id: E1_LongHorizonContinualLearning_smoke_v1
+phase: smoke
+base_run:
+  schema_version: 1
+  suite: e1-long-horizon
+  condition: matrix
+  seed: 1801
+  repetition: 0
+  observation_mode: structured_local
+  fixture:
+    save_id: PrimeStardewSmoke_406041616
+    player: PrimeStardewSmoke
+    starting_date: {year: 1, season: spring, day: 8}
+  tasks: [manage_and_develop_farm]
+  provider:
+    provider: openrouter
+    model: z-ai/glm-5.3
+    route: prime-agent-rpc
+    decoding: {temperature: 0, top_p: 1, max_output_tokens: 1200}
+  context:
+    total_tokens: 8000
+    objective_tokens: 700
+    observation_tokens: 3000
+    goals_tokens: 700
+    memories_tokens: 1500
+    skills_tokens: 900
+    recent_events_tokens: 1200
+  learning:
+    recent_context: true
+    persistent_memory: false
+    retrieval: false
+    skills: false
+    refinement: false
+  budget:
+    max_actions: 5000
+    max_game_days: 7
+    max_model_calls: 400
+    max_input_tokens: 3200000
+    max_output_tokens: 480000
+    max_cost_usd: 50
+    max_wall_seconds: 172800
+  tags: [e1, authenticated-live-smoke]
+  metadata:
+    - {key: study_family, value: E1_LongHorizonContinualLearning}
+conditions: [A, B, C, D, E, F]
+seeds: [1801]
+horizon_days: 7
+pause_during_inference: true
+persistent_objective: |-
+  Manage and develop this farm as effectively as possible over the available lifetime. Increase its long-term economic value and productive capacity while improving useful tools, infrastructure, resource access, and capabilities. Balance immediate reward against future progress. Adapt your strategy based on what you learn from experience.
+
+  You may choose your own priorities, intermediate goals, and daily strategy. Avoid unnecessary bankruptcy, wasted days, preventable failures, and investments that cannot reasonably pay off. Use only information and actions available through the permitted game interface.
+memory_token_budget: 1500
+probe_schedule:
+  days: [7]
+  definitions:
+    - probe_id: familiar-season-deadline
+      kind: familiar
+      capability: crop_planning
+      description: Choose whether a crop can mature before a stated season boundary.
+      weight: 1
+      maximum_score: 1
+      hidden_answer: evaluator-only-do-not-plant
+      contamination_terms: [evaluator-only-do-not-plant]
+    - probe_id: transfer-resource-plan
+      kind: transfer
+      capability: investment_planning
+      description: Choose between immediate spending and a structurally related delayed investment.
+      weight: 1
+      maximum_score: 1
+      hidden_answer: evaluator-only-preserve-prerequisite
+      contamination_terms: [evaluator-only-preserve-prerequisite]
+    - probe_id: conflict-season-rule
+      kind: conflict
+      capability: contextualization
+      description: Decide whether an earlier seasonal rule applies in a changed context.
+      weight: 1
+      maximum_score: 1
+      hidden_answer: evaluator-only-reject-stale-rule
+      contamination_terms: [evaluator-only-reject-stale-rule]
+refine_policy: nightly_bounded
+full_harness_features:
+  persistent_memory: true
+  relevance_retrieval: true
+  procedural_skills: true
+  reflection: true
+  persistent_goal_manager: true
+  adaptive_tool_selection: true
+  native_compaction: true
+  subagents: false
+primary_metric: standardized_probe_aulc
+alpha: 0.05
+bootstrap_samples: 10000
+exclusions:
+  - unverifiable event chain
+  - unmatched canonical starting state within a paired seed
+  - probe contamination of the parent lifetime
+  - unrecoverable infrastructure failure under the preregistered retry policy
+
+

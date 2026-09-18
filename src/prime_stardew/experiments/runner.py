@@ -382,6 +382,8 @@ class ExperimentRunner:
         environment: dict[str, Any] | None = None,
         game_date: GameDate | None = None,
         agent_state: dict[str, Any] | None = None,
+        memory_database: Path | None = None,
+        learning_databases: dict[str, Path] | None = None,
     ) -> RunCheckpointManifest:
         state = self.state
         if state.phase not in {RunPhase.DAY_COMPLETE, RunPhase.COMPLETED}:
@@ -406,6 +408,8 @@ class ExperimentRunner:
                 agent_state=agent_state or self.state.model_dump(mode="json"),
                 configuration=self.config.model_dump(mode="json"),
                 event_store=self.events,
+                memory_database=memory_database,
+                learning_databases=learning_databases,
                 kind=kind,
                 labels=labels,
                 environment=environment,

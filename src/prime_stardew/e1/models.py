@@ -24,6 +24,7 @@ PERSISTENT_OBJECTIVE = (
 
 class E1Phase(StrEnum):
     OFFLINE_VALIDATION = "offline_validation"
+    SMOKE = "smoke"
     PILOT = "pilot"
     SEASON = "season"
     YEAR = "year"
@@ -161,6 +162,9 @@ class E1StudyConfig(BaseModel):
         if self.phase is E1Phase.PILOT:
             if set(self.conditions) != set(E1Condition) or len(self.seeds) != 2 or self.horizon_days != 28:
                 raise ValueError("E1-Pilot requires six conditions, two seeds, and 28 days")
+        if self.phase is E1Phase.SMOKE:
+            if set(self.conditions) != set(E1Condition) or len(self.seeds) != 1 or self.horizon_days != 7:
+                raise ValueError("E1-Smoke requires six conditions, one seed, and seven days")
         if self.phase is E1Phase.SEASON and self.horizon_days != 28:
             raise ValueError("E1-Season requires a 28-day horizon")
         if self.phase is E1Phase.YEAR and self.horizon_days != 119:

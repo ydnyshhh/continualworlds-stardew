@@ -15,7 +15,7 @@ authenticated model gates.
 
 ### Validation snapshot
 
-- **165 automated tests** pass.
+- **171 automated tests** pass.
 - Live validation covers observation, movement, tools, farming, pause/resume, day transitions,
   save/restart, checkpoint recovery, and 50 observation/action cycles.
 - Every scored live trajectory uses ordinary game actions and records zero privileged actions.
@@ -30,6 +30,12 @@ metrics, inference accounting, and Spring Year 2 reset forks. The current determ
 gate covers 12 synthetic condition/seed runs and deliberately gives every condition the same probe
 curve. It validates the machinery and does not constitute an E1-Pilot result.
 
+The authenticated seven-day smoke runner is live-enabled for A–C. It restores a separate save from
+an immutable canonical checkpoint for each condition, uses GLM 5.3 through Prime RPC, pauses game
+time during inference, executes only typed guarded actions, and publishes a combined checkpoint at
+every day boundary. D–F remain disabled until skill creation and nightly reflection are connected to
+the broad-objective loop.
+
 Run the contract gate with:
 
 ```powershell
@@ -37,6 +43,15 @@ Run the contract gate with:
   --config .\configs\e1-offline-validation.yaml `
   --root .\runtime\smoke\e1-offline-contract `
   --output .\runtime\smoke\e1-offline-contract.json
+```
+
+Run one live smoke condition after Stardew and SMAPI are listening:
+
+```powershell
+.\.venv\Scripts\python.exe -m prime_stardew.e1_live_smoke `
+  --condition A `
+  --root .\runtime\smoke\e1-live-a `
+  --output .\runtime\smoke\e1-live-a.json
 ```
 
 ### Milestones

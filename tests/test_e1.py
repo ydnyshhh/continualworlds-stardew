@@ -5,10 +5,12 @@ from pathlib import Path
 
 import pytest
 
+from prime_stardew.agent import PrimeSession, ScriptedProvider
 from prime_stardew.e1 import (
     BranchType, CompetencyDomain, CompetencyInstance, E1Condition, HarnessCapabilities,
     LearningResetSpec, LearningState, MemoryExposurePolicy, ProbeDefinition, ProbeKind,
-    RefinementAttribution, RefinementOutcome, condition_manifest, exposed_memory_tokens,
+    PERSISTENT_OBJECTIVE, RefinementAttribution, RefinementOutcome,
+    condition_manifest, exposed_memory_tokens, materialize_run_config,
     select_memory_context, validate_condition_ladder,
 )
 from prime_stardew.e1.analysis import learning_curve_slope, score_probe, standardized_probe_aulc
@@ -18,10 +20,73 @@ from prime_stardew.e1.config import load_e1_config
 from prime_stardew.e1.offline import build_offline_report, run_offline_condition
 from prime_stardew.e1.branches import PhysicalProbeBranchManager
 from prime_stardew.env.checkpoints import CheckpointManager
+from prime_stardew.env.client import StarDojoClient
+from prime_stardew.env.lifecycle import EnvironmentController
 from prime_stardew.env.models import GameDate
+from prime_stardew.env.transport import ReplayTransport
 from prime_stardew.experiments.checkpoints import RunCheckpointManager
+from prime_stardew.experiments.config import (
+    ContextBudgetConfig, ExperimentBudget, FixtureConfig, RunConfig,
+)
+from prime_stardew.experiments.provenance import (
+    CodeProvenance, RunProvenance, RuntimeProvenance,
+)
+from prime_stardew.experiments.runner import ExperimentRunner
 from prime_stardew.telemetry import EventStore
 from prime_stardew.memory import MemoryKind, MemoryRecord, MemoryStore
+from prime_stardew.e1.conditions import learning_config
+from prime_stardew.e1.harness import HarnessContractError
+from prime_stardew.e1.prime_adapter import PrimeHarnessAdapter
+from prime_stardew.e1.live import run_live_days
+from prime_stardew.e1.activity import segment_live_competencies
+
+
+E1_PROVENANCE = RunProvenance(
+    code=CodeProvenance(revision="e1-test", dirty=False, dirty_patch_sha256="0" * 64),
+    runtime=RuntimeProvenance(
+        game_version="1.6.15", smapi_version="4.5.2", stardojo_version="patched",
+        stardojo_dll_sha256="1" * 64, python_version="3.13", platform="test",
+    ),
+)
+
+
+def _live_observation(day: int, *, radius_fixture: str = "observation-minimal.json") -> str:
+    fixture = Path("tests/fixtures") / radius_fixture
+    payload = json.loads(fixture.read_text(encoding="utf-8"))
+    payload["GameState"].update(DayOfMonth=day, Season="spring", Year=1, Time=600)
+    return json.dumps(payload)
+
+
+def _prime_adapter(
+    tmp_path: Path, condition: E1Condition, responses: list[str],
+    *, memory: MemoryStore | None = None,
+) -> PrimeHarnessAdapter:
+    manifest = condition_manifest(condition)
+    config = RunConfig(
+        suite="e1-adapter", condition=condition.value, seed=1, observation_mode="replay",
+        fixture=FixtureConfig(
+            save_id="Fixture_1", player="Fixture",
+            starting_date=GameDate(year=1, season="spring", day=1),
+        ),
+        tasks=("broad-objective",), learning=learning_config(manifest),
+        context=ContextBudgetConfig(
+            total_tokens=1000, objective_tokens=300, observation_tokens=300,
+            goals_tokens=100, memories_tokens=50, skills_tokens=100, recent_events_tokens=100,
+        ),
+        budget=ExperimentBudget(
+            max_actions=50, max_game_days=7, max_model_calls=20,
+            max_input_tokens=20000, max_output_tokens=5000, max_cost_usd=5,
+            max_wall_seconds=60,
+        ),
+    )
+    runner = ExperimentRunner(tmp_path / f"runs-{condition.value}", config, E1_PROVENANCE)
+    session = PrimeSession(runner, ScriptedProvider(responses), memory_store=memory)
+    skill_context = {"routine:v1": "Perform the validated routine."} if manifest.capabilities.procedural_skills else None
+    learning = LearningState(active_skill_refs=("routine:v1",)) if skill_context else None
+    return PrimeHarnessAdapter(
+        session, manifest, memory_token_budget=50,
+        skill_context=skill_context, learning_state=learning,
+    )
 
 
 def test_condition_capability_matrix_is_cumulative_and_b_differs_only_by_retrieval() -> None:
@@ -50,6 +115,24 @@ def test_b_and_c_require_equal_memory_token_budgets() -> None:
         validate_condition_ladder(manifests, memory_token_budget_by_condition=budgets)
 
 
+def test_live_smoke_materializes_stable_condition_specific_run_configs() -> None:
+    study, _ = load_e1_config(Path("configs/e1-live-smoke.yaml"))
+    assert study.phase.value == "smoke" and study.horizon_days == 7
+    seed = study.seeds[0]
+    configs = {
+        condition: materialize_run_config(study, condition, seed)
+        for condition in study.conditions
+    }
+    assert len({config.run_id() for config in configs.values()}) == 6
+    assert not configs[E1Condition.A_BASE].learning.persistent_memory
+    assert configs[E1Condition.B_MEMORY].learning.persistent_memory
+    assert not configs[E1Condition.B_MEMORY].learning.retrieval
+    assert configs[E1Condition.C_RETRIEVAL].learning.retrieval
+    assert configs[E1Condition.D_SKILLS].learning.skills
+    assert configs[E1Condition.E_REFINE].learning.refinement
+    assert all(config.budget.max_game_days == 7 for config in configs.values())
+
+
 def test_b_uses_chronology_and_c_uses_relevance_under_same_budget(tmp_path: Path) -> None:
     store = MemoryStore(tmp_path / "memory.sqlite3")
     epoch = datetime(2026, 1, 1, tzinfo=UTC)
@@ -76,6 +159,115 @@ def test_b_uses_chronology_and_c_uses_relevance_under_same_budget(tmp_path: Path
     assert exposed_memory_tokens(b) <= budget
     assert exposed_memory_tokens(c) <= budget
     store.close()
+
+
+def test_prime_adapter_enforces_manifest_accounts_calls_and_clears_condition_a_state(
+    tmp_path: Path,
+) -> None:
+    response = json.dumps({
+        "schema_version": 1, "actions": [{"name": "turn", "arguments": [1]}],
+        "goal_updates": ["inspect east field"], "memory_notes": [], "rationale": "observe",
+    })
+    adapter = _prime_adapter(tmp_path, E1Condition.A_BASE, [response])
+    adapter.start(objective=PERSISTENT_OBJECTIVE, run_id=adapter.session.runner.run_id)
+    decision = adapter.decide({
+        "state": {"day": 1, "weather": "sunny"},
+        "allowed_actions": ["turn"], "game_day": 1, "season": "spring",
+    })
+    assert decision["actions"][0]["name"] == "turn"
+    assert adapter.session.state.active_goals == ("inspect east field",)
+    adapter.end_day(game_day=1)
+    assert adapter.session.state.active_goals == ()
+    assert adapter.session.state.decision_count == 1
+    events = tuple(adapter.session.runner.events.iter_records())
+    accounted = [event for event in events if event.event_type == "e1_inference_accounted"]
+    assert len(accounted) == 1 and accounted[0].payload["calls"] == 1
+    assert any(event.event_type == "decision_context_composed" for event in events)
+
+
+def test_live_day_loop_uses_broad_objective_and_records_sleep_as_primitive(tmp_path: Path) -> None:
+    response = json.dumps({
+        "schema_version": 1, "actions": [], "goal_updates": [],
+        "memory_notes": [], "rationale": "day plan complete",
+    })
+    adapter = _prime_adapter(tmp_path, E1Condition.A_BASE, [response])
+    adapter.start(objective=PERSISTENT_OBJECTIVE, run_id=adapter.session.runner.run_id)
+    replay = ReplayTransport({
+        "observe_v2%2": [_live_observation(1), _live_observation(1), _live_observation(1)],
+        "observe_v2%1": [_live_observation(1), _live_observation(2)],
+        "sleep": ["Message received"],
+    })
+    controller = EnvironmentController(
+        StarDojoClient(replay), "PrimeStardewSmoke", poll_interval=0,
+    )
+    callback_phases = []
+    result = run_live_days(
+        adapter, controller, days=1, max_decisions_per_day=2,
+        on_day_complete=lambda _: callback_phases.append(adapter.session.runner.state.phase.value),
+    )
+    assert result.total_model_decisions == 1
+    assert result.total_primitive_actions == 1
+    assert result.total_failed_actions == 0
+    assert callback_phases == ["day_complete"]
+    assert result.days[0].game_date_after["day"] == 2
+    events = tuple(adapter.session.runner.events.iter_records())
+    actions = [event for event in events if event.event_type == "action_completed"]
+    assert len(actions) == 1 and actions[0].payload["name"] == "sleep"
+    assert actions[0].payload["privileged"] is False
+
+
+def test_live_activity_segmentation_uses_events_and_observation_deltas(tmp_path: Path) -> None:
+    events = EventStore(tmp_path / "activity.jsonl", "activity-run")
+    start = json.loads(_live_observation(1))
+    end = json.loads(_live_observation(1))
+    start["GameState"]["Time"], end["GameState"]["Time"] = 600, 700
+    start["Player"]["Stamina"], end["Player"]["Stamina"] = 100, 98
+    events.append("e1_live_day_started", {"elapsed_day": 1, "observation": start})
+    events.append("agent_decision", {
+        "decision_id": "decision-1",
+        "decision": {"actions": [{"name": "use", "arguments": []}]},
+    })
+    events.append("action_completed", {
+        "task_id": "e1-broad-objective", "action_id": "a1", "name": "use",
+        "arguments": [], "succeeded": True, "request_id": "r1", "privileged": False,
+    })
+    events.append("e1_live_day_pre_sleep", {"elapsed_day": 1, "observation": end})
+    events.append("e1_live_day_completed", {"elapsed_day": 1})
+    instances = segment_live_competencies(events.iter_records())
+    assert len(instances) == 1
+    instance = instances[0]
+    assert instance.domain is CompetencyDomain.FARM_MAINTENANCE
+    assert instance.model_decisions == 1 and instance.primitive_actions == 1
+    assert instance.game_minutes == 60 and instance.energy_used == 2
+    assert instance.domain_metrics["segmentation"] == "evaluator_event_heuristic_v1"
+
+
+def test_prime_adapter_checkpoint_restore_and_branch_reset_deactivate_memory(tmp_path: Path) -> None:
+    memory = MemoryStore(tmp_path / "adapter-memory.sqlite3")
+    memory.add_text("Water crops before noon", memory_id="semantic-1")
+    memory.add_text("Parsnips prefer spring", kind=MemoryKind.BELIEF, memory_id="belief-1")
+    adapter = _prime_adapter(tmp_path, E1Condition.C_RETRIEVAL, [], memory=memory)
+    adapter.start(objective=PERSISTENT_OBJECTIVE, run_id=adapter.session.runner.run_id)
+    checkpoint = tmp_path / "adapter-checkpoint.json"
+    digest = adapter.checkpoint(checkpoint)
+    assert len(digest) == 64
+    reset = adapter.reset_learning_state(LearningResetSpec(memory=True, beliefs=True))
+    assert not reset.active_memory_ids and not reset.active_belief_ids
+    assert not memory.records()
+    adapter.restore(checkpoint)
+    restored = adapter.export_learning_state()
+    # Logical state is restored, while the reset copy remains deactivated. Physical probe forks
+    # restore their own copied SQLite database before applying a reset.
+    assert restored.historical_artifact_ids == ("semantic-1", "belief-1")
+    memory.close()
+
+
+def test_prime_adapter_rejects_runtime_capability_mismatch(tmp_path: Path) -> None:
+    adapter = _prime_adapter(tmp_path, E1Condition.A_BASE, [])
+    with pytest.raises(HarnessContractError, match="capabilities differ"):
+        PrimeHarnessAdapter(
+            adapter.session, condition_manifest(E1Condition.B_MEMORY), memory_token_budget=50,
+        )
 
 
 def test_probe_normalization_aulc_and_slope() -> None:
