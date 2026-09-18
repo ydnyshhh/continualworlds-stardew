@@ -1,0 +1,22 @@
+{
+  "Player": {
+    "Name": "PrimeStardewSmoke",
+    "Health": 100,
+    "Stamina": 270.0,
+    "Money": 50000,
+    "Location": "Farm",
+    "Position": {"X": 64, "Y": 15},
+    "FacingDirection": 2,
+    "Inventory": [{"Name": "Axe", "Quantity": 1}]
+  },
+  "GameState": {
+    "Time": 600,
+    "DayOfMonth": 6,
+    "Season": "spring",
+    "Year": 1,
+    "Weather": "Sunny"
+  },
+  "ScreenShot": "AAAAAA==",
+  "CallBackData": {"OnDayStarted": 1},
+  "SurroundingsData": []
+}

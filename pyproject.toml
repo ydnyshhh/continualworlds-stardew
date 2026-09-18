@@ -15,6 +15,13 @@ dependencies = [
 
 [project.scripts]
 
+prime-stardew-command = "prime_stardew.cli:main"
+prime-stardew-smoke = "prime_stardew.smoke:main"
+prime-stardew-soak = "prime_stardew.soak:main"
+prime-stardew-control-smoke = "prime_stardew.control_smoke:main"
+prime-stardew-farming-smoke = "prime_stardew.farming_smoke:main"
+prime-stardew-movement-guard-smoke = "prime_stardew.movement_guard_smoke:main"
+
 [project.optional-dependencies]
 dev = [
   "pytest>=8.3,<10",
@@ -26,3 +33,4 @@ testpaths = ["tests"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/prime_stardew"]
+
