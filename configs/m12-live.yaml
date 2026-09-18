@@ -1,0 +1,49 @@
+schema_version: 1
+suite: m12-authenticated-memory-management
+condition: agent-selected-bounded-memory
+seed: 406041616
+repetition: 1
+observation_mode: replay
+fixture:
+  save_id: synthetic-memory-management-v1
+  player: PrimeStardewSmoke
+  starting_date: {year: 1, season: spring, day: 8}
+tasks: [m12-selective-memory-v1]
+provider:
+  provider: openrouter
+  model: z-ai/glm-5.3
+  route: prime-agent-rpc
+  decoding: {temperature: 0, top_p: 1, max_output_tokens: 1400}
+context:
+  total_tokens: 4096
+  objective_tokens: 512
+  observation_tokens: 1536
+  goals_tokens: 256
+  memories_tokens: 1024
+  skills_tokens: 0
+  recent_events_tokens: 256
+learning:
+  recent_context: true
+  persistent_memory: true
+  retrieval: true
+  skills: false
+  refinement: false
+memory_management:
+  enabled: true
+  budget_type: token_estimate
+  max_active_tokens: 18
+  policy: agent_selected
+  random_seed: 406041616
+  overflow_fallback: fifo
+budget:
+  max_actions: 1
+  max_game_days: 1
+  max_model_calls: 2
+  max_input_tokens: 12000
+  max_output_tokens: 2800
+  max_cost_usd: 2
+  max_wall_seconds: 600
+tags: [m12, memory-management, authenticated, glm-5.3]
+metadata:
+  - {key: benchmark, value: m12-selective-memory-v1}
+

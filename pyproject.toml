@@ -51,6 +51,9 @@ prime-stardew-m10-gate = "prime_stardew.m10_gate:main"
 prime-stardew-m11-gate = "prime_stardew.m11_gate:main"
 prime-stardew-m11-live = "prime_stardew.m11_live:main"
 
+prime-stardew-m12-gate = "prime_stardew.m12_gate:main"
+prime-stardew-m12-live = "prime_stardew.m12_live:main"
+
 [project.optional-dependencies]
 dev = [
   "pytest>=8.3,<10",
@@ -62,6 +65,7 @@ testpaths = ["tests"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/prime_stardew"]
+
 
 
 

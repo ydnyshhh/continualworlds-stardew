@@ -1,0 +1,17 @@
+schema_version: 1
+study_id: m12-selective-memory-v1
+hypothesis: Agent-selected bounded memory improves held-out utility per active token over FIFO under identical candidate streams and capacity.
+primary_metric: held_out_utility_per_active_token
+favorable_direction: higher
+seeds: [406041616, 406041617, 406041618, 406041619, 406041620, 406041621, 406041622, 406041623]
+conditions: [fifo, least_recently_used, least_retrieved, agent_selected, none]
+bounded_conditions: [fifo, least_recently_used, least_retrieved, agent_selected]
+max_active_tokens: 18
+alpha: 0.05
+bootstrap_samples: 10000
+exclusions:
+  - Authenticated event chain corruption.
+  - Missing or duplicate terminal scoring event.
+  - Candidate-state hash mismatch within a seed.
+  - Fixed-budget enforcement failure.
+analysis_plan: Pair agent-selected and FIFO by seed. Estimate the difference in held-out utility per active token with a deterministic paired bootstrap 95% confidence interval and exact two-sided sign test. Require a positive lower interval bound and p below alpha.
