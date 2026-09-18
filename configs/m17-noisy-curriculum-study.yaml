@@ -1,0 +1,20 @@
+schema_version: 1
+study_id: m17-self-generated-noisy-evidence-curriculum-v1
+hypothesis: A curriculum selected from observed evidence-handling weaknesses improves hidden noisy and adversarial evidence performance over an equal-cost fixed human curriculum.
+primary_metric: heldout_transfer_accuracy
+favorable_direction: higher
+paired: true
+seeds: [1701, 1702, 1703, 1704, 1705, 1706, 1707, 1708]
+conditions: [random_curriculum, fixed_human_curriculum, weakness_targeted_scripted, agent_generated_curriculum]
+practice_budget: 2
+heldout_tasks_per_regime: 2
+alpha: 0.05
+confidence_level: 0.95
+bootstrap_samples: 10000
+scripted_noninferiority_margin: 0
+exclusions:
+  - malformed or hash-invalid event log
+  - incomplete condition-seed run
+  - held-out task identifier or answer exposed before evaluation
+stopping_rule: Run exactly 32 preregistered condition-seed runs with no optional stopping.
+analysis_plan: Pair agent-generated and fixed-human curricula by seed, compare integer held-out accuracy percentages with a two-sided exact sign test and percentile bootstrap interval, require non-inferiority to weakness-targeted scripted selection, equal training cost, matched hashes, and zero contamination.

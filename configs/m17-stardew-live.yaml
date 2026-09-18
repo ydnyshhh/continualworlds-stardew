@@ -1,0 +1,41 @@
+schema_version: 1
+suite: m17-live-stardew-corruption
+condition: repair-from-live-and-adversarial-evidence
+seed: 406041617
+repetition: 1
+observation_mode: structured_local
+fixture:
+  save_id: PrimeStardewM17Corrupt_406041617
+  player: PrimeStardewSmoke
+  starting_date: {year: 1, season: spring, day: 8}
+tasks: [m17-live-corrupted-twig-belief-v1]
+provider:
+  provider: openrouter
+  model: z-ai/glm-5.3
+  route: prime-agent-rpc
+  decoding: {temperature: 0, top_p: 1, max_output_tokens: 600}
+context:
+  total_tokens: 3072
+  objective_tokens: 512
+  observation_tokens: 768
+  goals_tokens: 128
+  memories_tokens: 512
+  skills_tokens: 0
+  recent_events_tokens: 256
+learning:
+  recent_context: true
+  persistent_memory: true
+  retrieval: true
+  skills: false
+  refinement: true
+budget:
+  max_actions: 30
+  max_game_days: 1
+  max_model_calls: 2
+  max_input_tokens: 8000
+  max_output_tokens: 1200
+  max_cost_usd: 1
+  max_wall_seconds: 1200
+tags: [m17, live-stardew, memory-corruption, adversarial-evidence, glm-5.3]
+metadata:
+  - {key: fixture, value: disposable-spring8-corrupted-twig-yield}

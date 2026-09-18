@@ -14,58 +14,46 @@ dependencies = [
 ]
 
 [project.scripts]
-
 prime-stardew-command = "prime_stardew.cli:main"
 prime-stardew-smoke = "prime_stardew.smoke:main"
+prime-stardew-checkpoint = "prime_stardew.checkpoint_cli:main"
 prime-stardew-soak = "prime_stardew.soak:main"
+prime-stardew-run-checkpoint = "prime_stardew.run_checkpoint_cli:main"
 prime-stardew-control-smoke = "prime_stardew.control_smoke:main"
 prime-stardew-farming-smoke = "prime_stardew.farming_smoke:main"
 prime-stardew-movement-guard-smoke = "prime_stardew.movement_guard_smoke:main"
-
-prime-stardew-checkpoint = "prime_stardew.checkpoint_cli:main"
-prime-stardew-recovery-probe = "prime_stardew.recovery_probe:main"
-
-prime-stardew-run-checkpoint = "prime_stardew.run_checkpoint_cli:main"
 prime-stardew-retention = "prime_stardew.retention_cli:main"
+prime-stardew-recovery-probe = "prime_stardew.recovery_probe:main"
 prime-stardew-experiment = "prime_stardew.experiment_cli:main"
 prime-stardew-m4-gate = "prime_stardew.m4_gate:main"
-
 prime-stardew-m5-gate = "prime_stardew.m5_gate:main"
 prime-stardew-m5-live = "prime_stardew.m5_live:main"
-
 prime-stardew-m6-gate = "prime_stardew.m6_gate:main"
 prime-stardew-m6-live = "prime_stardew.m6_live:main"
 prime-stardew-memory = "prime_stardew.memory_cli:main"
-
 prime-stardew-m7-gate = "prime_stardew.m7_gate:main"
 prime-stardew-m7-live = "prime_stardew.m7_live:main"
-
 prime-stardew-m8-gate = "prime_stardew.m8_gate:main"
 prime-stardew-m8-live = "prime_stardew.m8_live:main"
-
 prime-stardew-m9-gate = "prime_stardew.m9_gate:main"
 prime-stardew-m9-report = "prime_stardew.m9_report:main"
-
 prime-stardew-m10-gate = "prime_stardew.m10_gate:main"
-
 prime-stardew-m11-gate = "prime_stardew.m11_gate:main"
 prime-stardew-m11-live = "prime_stardew.m11_live:main"
-
 prime-stardew-m12-gate = "prime_stardew.m12_gate:main"
 prime-stardew-m12-live = "prime_stardew.m12_live:main"
-
 prime-stardew-m13-gate = "prime_stardew.m13_gate:main"
 prime-stardew-m13-live = "prime_stardew.m13_live:main"
-
 prime-stardew-m14-gate = "prime_stardew.m14_gate:main"
 prime-stardew-m14-live = "prime_stardew.m14_live:main"
 prime-stardew-m14-stardew-live = "prime_stardew.m14_stardew_live:main"
-
 prime-stardew-m15-gate = "prime_stardew.m15_gate:main"
 prime-stardew-m15-live = "prime_stardew.m15_live:main"
-
 prime-stardew-m16-gate = "prime_stardew.m16_gate:main"
 prime-stardew-m16-live = "prime_stardew.m16_live:main"
+prime-stardew-m17-gate = "prime_stardew.m17_gate:main"
+prime-stardew-m17-live = "prime_stardew.m17_live:main"
+prime-stardew-m17-stardew-live = "prime_stardew.m17_stardew_live:main"
 
 [project.optional-dependencies]
 dev = [
@@ -78,18 +66,3 @@ testpaths = ["tests"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/prime_stardew"]
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
