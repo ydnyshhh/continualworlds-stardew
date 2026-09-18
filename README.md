@@ -9,99 +9,41 @@ evaluation layers will live in this repository.
 
 ## Current status
 
-The Windows environment proof is complete on Stardew Valley 1.6.15, SMAPI 4.5.2,
-and a patched StarDojo 1.0.0 build. The validated path includes structured
-observation, an action with observed state change, pause/resume, day transition,
-save creation, restart, and checkpoint reload using a disposable test farmer.
+All milestones from M0 through M17 are implemented. The current build uses Stardew Valley 1.6.15,
+SMAPI 4.5.2, patched StarDojo 1.0.0, Prime Agent 0.9.5, and OpenRouter `z-ai/glm-5.3` for
+authenticated model gates.
 
-Milestones M1 through M17 have controlled gates. The typed Python SDK passed 154 automated tests, a live
-reversible smoke test, a forced-disconnect recovery test, and 50 live
-observation/action cycles. M2 checkpoint creation, verification, tamper detection,
-and restore under a new experiment save ID are implemented and live-validated.
-Experiments now have hash-chained append-only JSONL events and atomic combined
-checkpoints for game, agent, configuration, and event-cursor state.
-Autonomous movement now uses a destination occupancy guard with verified movement
-postconditions.
-The deterministic task harness scored turn/move, water crop, clear debris,
-harvest crop, and chest transfer at 1.0 on three clean repetitions each, with no
-privileged command inside any scored trajectory.
-M4 adds immutable YAML run configuration, stable content-addressed run IDs,
-provenance, lifecycle enforcement, budget accounting, idempotent event recording,
-normalized trajectory comparison, and checkpoint-backed resume.
-M5 adds a persistent Prime Agent JSONL RPC adapter, provider-neutral request and
-response schemas, deterministic bounded context, strict allowlisted JSON decisions,
-one repair attempt, actual provider/model/API attribution, paused-game inference,
-and checkpointed goals without transcript replay. Prime Agent 0.9.5 and a private
-Node 22.23.2 runtime are installed under `runtime`; a no-model RPC `get_state` probe
-passed. The offline gate passed all five atomic trajectories. The authenticated live
-gate also passed all five tasks through OpenRouter `z-ai/glm-5.3`: six attributable
-model calls, five 1.0 task scores, and zero privileged actions in scored trajectories.
-M6 adds an external SQLite memory store with immutable episode, semantic, and belief
-records; append-only lifecycle events; deterministic keyword and metadata retrieval;
-validity and confidence filters; ranked retrieval telemetry; hashed transfer bundles;
-and memory-aware combined checkpoints. Its paired authenticated ablation used fresh
-Prime sessions with OpenRouter `z-ai/glm-5.3`. Only memory plus retrieval recovered the
-hidden fact, and deleting the memory removed the gain without changing game state.
-M7 adds fixed-budget evidence selection, structured reflection, citation-checked
-versioned beliefs, contradiction-driven revision, episode-to-semantic consolidation,
-four refinement policies, and prediction calibration. Both the deterministic gate and
-an authenticated two-call OpenRouter `z-ai/glm-5.3` gate formed and revised the hidden
-crop rule while excluding superseded and deleted beliefs from current retrieval.
-M8 adds immutable parameterized skill versions, model-driven proposals from successful
-trajectories, a restricted typed-action compiler, replay and disposable-live validation,
-append-only activation and rollback, and per-use reasoning/action savings. Its watering
-skill passed three deterministic and three live executions at score 1.0. After charging
-the one-call proposal, the skill condition saved two model decisions while preserving the
-same nine primitive actions and task outcome.
-M9 adds three versioned project benchmarks, daily intermediate scoring, a deterministic
-28-day Spring environment, authenticated replay checkpoints, injected-crash recovery,
-multi-seed aggregation, and report reconstruction exclusively from raw events. Three seeds
-completed all 28 days and all three projects; the interrupted seed resumed from Day 14
-without a duplicate day completion. These are benchmark-system results, not causal claims.
-M10 adds immutable study preregistration, paired condition/seed execution, authenticated
-start-state identity, deterministic bootstrap confidence intervals, an exact sign test, and
-machine-readable failure analysis. Across eight paired 28-day runs per condition, procedural
-skills reduced model decisions from 28 to 23 while preserving all project outcomes and 592
-primitive actions. The causal claim is limited to the fixed deterministic replay environment.
-M11 adds a configured 112-day four-season lifetime, authenticated season-boundary checkpoints,
-an 84-day dormant-skill retest, independent hash-verified memory and skill transfer bundles,
-held-out contamination checks, five recipient baselines, and fixed-budget model-tier routing.
-Full inheritance raised held-out success from 0.5 to 1.0 and reduced decisions from 8 to 4.
-The external-validity gate then moved the same semantic state into authenticated OpenRouter
-`z-ai/glm-5.3`: fresh sessions scored 0/2 and transferred sessions scored 2/2. A transferred
-M8 watering skill also scored 1.0 on a disposable live save after 20 verified transitions to
-Spring 28, with zero privileged actions in the scored trajectory.
-M12 adds bounded selective memory management with append-only status transitions and authenticated
-agent selection. M13 adds fixed-budget experience-replay prioritization with exact replay-event
-provenance and held-out answer isolation. Across 40 matched M13 runs, agent priority reached 1.0
-held-out accuracy versus 0.6667 for error priority. Authenticated GLM 5.3 selected all three
-transferable failures in one call, scored 3/3 versus 2/3, and produced a verified 24-event chain.
-M14 adds costly active experimentation, immutable evidence-linked belief revision, matched causal
-conditions, and a preregistered eight-seed study. Its controlled agent condition improved reward
-from 1,680 to 2,280. A separate authenticated live Stardew gate restored two identical disposable
-Spring 8 saves: GLM 5.3 chose two twig samples, observed 1 and 1 Wood, predicted the held-out yield
-as 1, and observed 1 in both the active and matched-control branches. The live scored phase used
-zero privileged actions and completed a verified 34-event chain.
-M15 adds seeded, versioned counterfactual worlds and an `A -> B -> A` stability-plasticity study.
-Across 32 matched runs, contextual beliefs adapted to B in one interaction and recovered A with
-zero lag; a global belief adapted equally quickly but required relearning when A returned. The
-paired return-retention effect was +1.0 with 95% CI [1.0, 1.0] and p=0.0078125. An authenticated
-two-call GLM 5.3 gate contextualized both shifted mechanics, retained the stable mechanic, and
-selected all three correct actions when A returned.
-M16 adds five hidden memory-corruption types, clean decoys, immutable evidence-linked repair,
-restricted schema-level policy patches, and a two-episode causal study. Across 32 matched runs,
-adaptive repair reduced evidence required from two contradictory observations to one and improved
-held-out utility retention by 15.625 percentage points (95% CI [15.0, 16.25], p=0.0078125), with
-zero clean false repairs or post-correction recurrence. An authenticated GLM 5.3 gate improved from
-6/7 before its self-proposed policy patch to 7/7 afterward, correcting five corrupted records while
-preserving two clean records.
-M17 adds fixed-budget self-generated curricula for independent noise, burst noise, duplicate-source
-attacks, and source spoofing. Across 32 matched runs, agent-generated curricula improved hidden
-accuracy over a fixed human curriculum by 28.125 points (95% CI [25.0, 34.375], p=0.0078125) and
-matched the scripted weakness-targeted baseline. GLM 5.3 selected the two failed capabilities and
-scored 8/8 on hidden evaluation. In a disposable live Stardew save, it superseded a false 5-Wood
-twig belief from two live 1-Wood samples, rejected an unauthenticated false claim, and predicted a
-third 1-Wood yield exactly using zero privileged scored actions.
+### Validation snapshot
+
+- **154 automated tests** pass.
+- Live validation covers observation, movement, tools, farming, pause/resume, day transitions,
+  save/restart, checkpoint recovery, and 50 observation/action cycles.
+- Every scored live trajectory uses ordinary game actions and records zero privileged actions.
+- Experiment history is stored as hash-chained JSONL events with combined game, agent,
+  configuration, memory, and event-cursor checkpoints.
+
+### Milestones
+
+| Milestone | Capability | Result |
+|---|---|---|
+| M0 | Research scope and Windows setup | Full game, SMAPI, and patched StarDojo environment established. |
+| [M1](docs/control-test-result.md) | Typed game controls | Movement, tools, farming, lifecycle controls, and occupancy guards passed live validation. |
+| [M2](docs/recovery-test-result.md) | Checkpoints and recovery | Save verification, tamper detection, restore, and forced-disconnect recovery passed. |
+| [M3](docs/m3-task-harness-result.md) | Atomic task harness | Five task types scored 1.0 across three clean repetitions each. |
+| [M4](docs/m4-experiment-runner-result.md) | Reproducible experiments | Immutable configs, stable run IDs, event chains, budgets, and checkpoint-backed resume implemented. |
+| [M5](docs/m5-prime-integration-result.md) | Prime Agent integration | GLM 5.3 completed all five live tasks with attributable calls and strict typed decisions. |
+| [M6](docs/m6-memory-result.md) | Persistent memory | Only memory plus retrieval recovered the hidden fact in the authenticated ablation. |
+| [M7](docs/m7-reflection-result.md) | Reflection and belief revision | Formed and revised an evidence-linked hidden crop rule while excluding superseded beliefs. |
+| [M8](docs/m8-skills-result.md) | Procedural skills | Watering skill scored 1.0 in replay and live tests and saved two model decisions. |
+| [M9](docs/m9-season-benchmark-result.md) | Season benchmark | Three seeds completed all projects and 28 days; interrupted execution resumed exactly once. |
+| [M10](docs/m10-proceduralization-study-result.md) | Causal skill study | Skills reduced decisions from 28 to 23 while preserving outcomes and 592 primitive actions. |
+| [M11](docs/m11-lifetime-transfer-result.md) | Lifetime transfer | Full inheritance raised held-out success from 0.5 to 1.0 and cut decisions from 8 to 4. |
+| [M12](docs/m12-memory-management-result.md) | Selective memory | Agent selection doubled retained utility and improved utility per token over FIFO. |
+| [M13](docs/m13-experience-replay-result.md) | Experience replay | Agent priority scored 3/3 versus error priority's 2/3 under the same replay budget. |
+| [M14](docs/m14-active-experimentation-result.md) | Active experimentation | Controlled reward rose from 1,680 to 2,280; live held-out twig yield was predicted exactly. |
+| [M15](docs/m15-stardew-shift-result.md) | `A -> B -> A` adaptation | Contextual beliefs adapted to B in one interaction and recovered A with zero lag. |
+| [M16](docs/m16-memory-corruption-result.md) | Autonomous memory repair | Adaptive repair reached 7/7 held-out accuracy with no clean false repairs. |
+| [M17](docs/m17-noisy-curriculum-result.md) | Noisy and adversarial learning | Agent curriculum reached 8/8 hidden accuracy and rejected a spoofed live observation. |
 
 ## Documents
 
