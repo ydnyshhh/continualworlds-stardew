@@ -1,0 +1,40 @@
+schema_version: 1
+suite: m4-atomic-tasks
+condition: deterministic-scripted
+seed: 406041616
+repetition: 0
+observation_mode: replay
+fixture:
+  save_id: PrimeStardewM3A_406041616
+  player: PrimeStardewSmoke
+  starting_date:
+    year: 1
+    season: spring
+    day: 8
+  checkpoint: runtime/checkpoints/recovery-v2-day08-final
+tasks:
+  - m3-turn-move-v1
+  - m3-water-crop-v1
+  - m3-clear-debris-v1
+  - m3-harvest-crop-v1
+  - m3-chest-transfer-v1
+provider:
+  provider: scripted
+  model: scripted-v1
+  route: local
+  decoding:
+    temperature: 0
+    top_p: 1
+    max_output_tokens: 1024
+budget:
+  max_actions: 100
+  max_game_days: 1
+  max_model_calls: 0
+  max_input_tokens: 0
+  max_output_tokens: 0
+  max_cost_usd: 0
+  max_wall_seconds: 3600
+tags: [m4, deterministic, atomic-tasks]
+metadata:
+  - key: source
+    value: m3-live-gate

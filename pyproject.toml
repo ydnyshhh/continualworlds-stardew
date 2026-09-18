@@ -25,6 +25,11 @@ prime-stardew-movement-guard-smoke = "prime_stardew.movement_guard_smoke:main"
 prime-stardew-checkpoint = "prime_stardew.checkpoint_cli:main"
 prime-stardew-recovery-probe = "prime_stardew.recovery_probe:main"
 
+prime-stardew-run-checkpoint = "prime_stardew.run_checkpoint_cli:main"
+prime-stardew-retention = "prime_stardew.retention_cli:main"
+prime-stardew-experiment = "prime_stardew.experiment_cli:main"
+prime-stardew-m4-gate = "prime_stardew.m4_gate:main"
+
 [project.optional-dependencies]
 dev = [
   "pytest>=8.3,<10",
@@ -36,5 +41,6 @@ testpaths = ["tests"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/prime_stardew"]
+
 
 
