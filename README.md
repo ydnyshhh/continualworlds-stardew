@@ -15,7 +15,7 @@ authenticated model gates.
 
 ### Validation snapshot
 
-- **164 automated tests** pass.
+- **165 automated tests** pass.
 - Live validation covers observation, movement, tools, farming, pause/resume, day transitions,
   save/restart, checkpoint recovery, and 50 observation/action cycles.
 - Every scored live trajectory uses ordinary game actions and records zero privileged actions.

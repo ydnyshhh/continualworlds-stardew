@@ -176,10 +176,11 @@ The new E1 package supplies the condition matrix, harness contract, branch ident
 competency events, probe scoring, AULC, raw-event contract validation, and condition-faithful B/C
 memory exposure. Combined checkpoints now capture and restore named learning SQLite databases in
 addition to the game, agent, configuration, event cursor, and memory database. Remaining work before
-the real pilot is the live broad-objective runner, Prime adapter capability enforcement, physical
-probe lifecycle orchestration around those combined checkpoints, evaluator-side activity
-segmentation from live events, authenticated seven-day smoke runs, cost review, and pilot
-preregistration.
+the real pilot is the live broad-objective runner, Prime adapter capability enforcement,
+evaluator-side activity segmentation from live events, authenticated seven-day smoke runs, cost
+review, and pilot preregistration. Physical probe lifecycle orchestration restores combined
+checkpoints into isolated save and SQLite paths, verifies the immutable parent, and removes the
+registered branch artifacts after scoring.
 
 ## Reporting and interpretation
 

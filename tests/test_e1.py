@@ -1,4 +1,5 @@
 import json
+import sqlite3
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -15,6 +16,10 @@ from prime_stardew.e1.branches import ProbeBranchManager, reset_learning_state, 
 from prime_stardew.e1.competencies import normalized_competency_metrics, within_period_gain
 from prime_stardew.e1.config import load_e1_config
 from prime_stardew.e1.offline import build_offline_report, run_offline_condition
+from prime_stardew.e1.branches import PhysicalProbeBranchManager
+from prime_stardew.env.checkpoints import CheckpointManager
+from prime_stardew.env.models import GameDate
+from prime_stardew.experiments.checkpoints import RunCheckpointManager
 from prime_stardew.telemetry import EventStore
 from prime_stardew.memory import MemoryKind, MemoryRecord, MemoryStore
 
@@ -115,6 +120,52 @@ def test_disposable_probe_branch_preserves_parent_state(tmp_path: Path) -> None:
         "parent_learning_state_sha256": branch.identity.parent_learning_state_sha256,
         "parent_unchanged": True,
     }]
+
+
+def test_physical_probe_branch_restores_and_discards_all_registered_state(tmp_path: Path) -> None:
+    saves = tmp_path / "saves"
+    source = saves / "Fixture_1"
+    source.mkdir(parents=True)
+    (source / "Fixture_1").write_text("parent-save", encoding="utf-8")
+    events = EventStore(tmp_path / "events.jsonl", "parent-run")
+    memory_path = tmp_path / "memory.sqlite3"
+    memory = MemoryStore(memory_path)
+    memory.add_text("Spring rule", memory_id="spring-rule")
+    memory.close()
+    skills_path = tmp_path / "skills.sqlite3"
+    with sqlite3.connect(skills_path) as database:
+        database.execute("CREATE TABLE skills (name TEXT NOT NULL)")
+        database.execute("INSERT INTO skills VALUES ('watering-v1')")
+    checkpoints = RunCheckpointManager(
+        CheckpointManager(saves, stable_checks=2, stable_interval=0, stable_timeout=1)
+    )
+    checkpoint = tmp_path / "checkpoint"
+    checkpoints.create(
+        run_id="parent-run", destination=checkpoint, save_id="Fixture_1", player="Fixture",
+        game_date=GameDate(year=1, season="spring", day=7),
+        agent_state={"learning_state": {"memory_ids": ["spring-rule"]}},
+        configuration={"study": "E1"}, event_store=events,
+        memory_database=memory_path, learning_databases={"skills": skills_path},
+    )
+    manager = PhysicalProbeBranchManager(
+        checkpoints=checkpoints, branches_root=tmp_path / "branches",
+        parent_run_id="parent-run", events=events,
+    )
+    branch = manager.fork(
+        checkpoint=checkpoint, branch_id="probe-day-7",
+        destination_save_id="Probe_7", day=7,
+    )
+    assert (branch.restored.game_save_path / "Probe_7").read_text(encoding="utf-8") == "parent-save"
+    assert branch.restored.memory_database is not None
+    assert branch.restored.learning_databases["skills"].is_file()
+    (branch.restored.game_save_path / "Probe_7").write_text("mutated-probe", encoding="utf-8")
+    manager.discard(branch)
+    assert not branch.restored.game_save_path.exists()
+    assert not branch.branch_root.exists()
+    assert (checkpoint / "game" / "Fixture_1").read_text(encoding="utf-8") == "parent-save"
+    records = tuple(events.iter_records())
+    assert records[-1].event_type == "physical_probe_branch_discarded"
+    assert records[-1].payload["parent_unchanged"] is True
 
 
 def test_learning_reset_deactivates_without_destroying_history(tmp_path: Path) -> None:
