@@ -54,6 +54,7 @@ prime-stardew-m16-live = "prime_stardew.m16_live:main"
 prime-stardew-m17-gate = "prime_stardew.m17_gate:main"
 prime-stardew-m17-live = "prime_stardew.m17_live:main"
 prime-stardew-m17-stardew-live = "prime_stardew.m17_stardew_live:main"
+prime-stardew-e1-offline-gate = "prime_stardew.e1_offline_gate:main"
 
 [project.optional-dependencies]
 dev = [

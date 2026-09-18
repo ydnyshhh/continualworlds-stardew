@@ -15,12 +15,29 @@ authenticated model gates.
 
 ### Validation snapshot
 
-- **154 automated tests** pass.
+- **164 automated tests** pass.
 - Live validation covers observation, movement, tools, farming, pause/resume, day transitions,
   save/restart, checkpoint recovery, and 50 observation/action cycles.
 - Every scored live trajectory uses ordinary game actions and records zero privileged actions.
 - Experiment history is stored as hash-chained JSONL events with combined game, agent,
-  configuration, memory, and event-cursor checkpoints.
+  configuration, memory, named learning-database, and event-cursor checkpoints.
+
+### E1 long-horizon study
+
+The [E1 design](docs/E1_LONG_HORIZON_DESIGN.md) defines the six-condition continual-learning
+ablation, paired-seed protocol, disposable probes, normalized probe AULC, recurring competency
+metrics, inference accounting, and Spring Year 2 reset forks. The current deterministic contract
+gate covers 12 synthetic condition/seed runs and deliberately gives every condition the same probe
+curve. It validates the machinery and does not constitute an E1-Pilot result.
+
+Run the contract gate with:
+
+```powershell
+.\.venv\Scripts\python.exe -m prime_stardew.e1_offline_gate `
+  --config .\configs\e1-offline-validation.yaml `
+  --root .\runtime\smoke\e1-offline-contract `
+  --output .\runtime\smoke\e1-offline-contract.json
+```
 
 ### Milestones
 
@@ -71,6 +88,7 @@ authenticated model gates.
 - [Memory-corruption result](docs/m16-memory-corruption-result.md)
 - [Noisy curriculum design](docs/m17-noisy-curriculum-design.md)
 - [Noisy curriculum and live corruption result](docs/m17-noisy-curriculum-result.md)
+- [E1 long-horizon continual-learning study design](docs/E1_LONG_HORIZON_DESIGN.md)
 - [Stardew-Shift results](docs/m15-stardew-shift-result.md)
 - [Machine-readable smoke result](docs/smoke-test-result.json)
 - [StarDojo compatibility patch](patches/stardojo-windows-build.patch)

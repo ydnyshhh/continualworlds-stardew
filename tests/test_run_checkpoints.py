@@ -1,4 +1,5 @@
 import json
+import sqlite3
 
 import pytest
 
@@ -25,6 +26,10 @@ def test_combined_checkpoint_round_trip_and_resume_boundary(tmp_path):
     memory = MemoryStore(memory_path)
     memory.add_text("Water crops before noon.", memory_id="watering-rule")
     memory.close()
+    skills_path = tmp_path / "skills.sqlite3"
+    with sqlite3.connect(skills_path) as skills:
+        skills.execute("CREATE TABLE state (value TEXT NOT NULL)")
+        skills.execute("INSERT INTO state VALUES ('skill-v1')")
     manager = RunCheckpointManager(
         CheckpointManager(saves, stable_checks=2, stable_interval=0, stable_timeout=1)
     )
@@ -39,6 +44,7 @@ def test_combined_checkpoint_round_trip_and_resume_boundary(tmp_path):
         configuration={"policy": "scripted", "seed": 7},
         event_store=events,
         memory_database=memory_path,
+        learning_databases={"skills": skills_path},
         environment={"game_version": "1.6.15"},
     )
 
@@ -47,6 +53,7 @@ def test_combined_checkpoint_round_trip_and_resume_boundary(tmp_path):
     restored = manager.restore(
         bundle, "Restored_1", event_store=events,
         destination_memory_path=tmp_path / "restored-memory.sqlite3",
+        destination_learning_paths={"skills": tmp_path / "restored-skills.sqlite3"},
     )
 
     assert restored.event_cursor == manifest.event_cursor
@@ -58,6 +65,9 @@ def test_combined_checkpoint_round_trip_and_resume_boundary(tmp_path):
     restored_memory = MemoryStore(restored.memory_database)
     assert restored_memory.get("watering-rule").text == "Water crops before noon."  # type: ignore[union-attr]
     restored_memory.close()
+    assert restored.learning_databases["skills"] == (tmp_path / "restored-skills.sqlite3").resolve()
+    with sqlite3.connect(restored.learning_databases["skills"]) as skills:
+        assert skills.execute("SELECT value FROM state").fetchone()[0] == "skill-v1"
 
 
 def test_combined_checkpoint_detects_agent_state_tamper(tmp_path):

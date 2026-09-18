@@ -55,6 +55,7 @@ class RestoredRunState(BaseModel):
     configuration: dict[str, Any]
     event_cursor: EventCursor
     memory_database: Path | None = None
+    learning_databases: dict[str, Path] = Field(default_factory=dict)
 
 
 class RunCheckpointManager:
@@ -75,6 +76,7 @@ class RunCheckpointManager:
         configuration: dict[str, Any],
         event_store: EventStore,
         memory_database: Path | None = None,
+        learning_databases: dict[str, Path] | None = None,
         kind: CheckpointKind = CheckpointKind.DAY,
         labels: tuple[str, ...] = (),
         environment: dict[str, Any] | None = None,
@@ -109,6 +111,14 @@ class RunCheckpointManager:
                 memory_target = temporary / "memory" / "store.sqlite3"
                 memory_target.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(memory_database, memory_target)
+            for name, database in sorted((learning_databases or {}).items()):
+                _validate_database_name(name)
+                database = database.resolve()
+                if not database.is_file():
+                    raise CheckpointError(f"Learning database does not exist: {database}")
+                target = temporary / "learning" / f"{name}.sqlite3"
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(database, target)
             files = _inventory(temporary)
             manifest = RunCheckpointManifest(
                 checkpoint_id=str(uuid4()),
@@ -159,6 +169,7 @@ class RunCheckpointManager:
         *,
         event_store: EventStore | None = None,
         destination_memory_path: Path | None = None,
+        destination_learning_paths: dict[str, Path] | None = None,
     ) -> RestoredRunState:
         manifest = self.verify(checkpoint, event_store=event_store)
         checkpoint = checkpoint.resolve()
@@ -180,12 +191,35 @@ class RunCheckpointManager:
                 pending = restored_memory.with_name(f".{restored_memory.name}.tmp-{uuid4().hex}")
                 shutil.copy2(memory_source, pending)
                 os.replace(pending, restored_memory)
+        restored_learning: dict[str, Path] = {}
+        learning_root = checkpoint / "learning"
+        for source in sorted(learning_root.glob("*.sqlite3")):
+            name = source.stem
+            _validate_database_name(name)
+            requested = (destination_learning_paths or {}).get(name)
+            if requested is None:
+                restored_learning[name] = source
+                continue
+            destination = requested.resolve()
+            if destination.exists():
+                raise CheckpointError(f"Learning restore destination already exists: {destination}")
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            pending = destination.with_name(f".{destination.name}.tmp-{uuid4().hex}")
+            shutil.copy2(source, pending)
+            os.replace(pending, destination)
+            restored_learning[name] = destination
+        unexpected = set(destination_learning_paths or {}) - set(restored_learning)
+        if unexpected:
+            raise CheckpointError(
+                f"Requested learning databases are absent from checkpoint: {sorted(unexpected)}"
+            )
         return RestoredRunState(
             game_save_path=save_path,
             agent_state=agent_state,
             configuration=configuration,
             event_cursor=manifest.event_cursor,
             memory_database=restored_memory,
+            learning_databases=restored_learning,
         )
 
 
@@ -211,6 +245,11 @@ def _read_object(path: Path) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise CheckpointError(f"Expected JSON object: {path}")
     return value
+
+
+def _validate_database_name(name: str) -> None:
+    if not name or any(not (char.isalnum() or char in "-_") for char in name):
+        raise CheckpointError(f"Unsafe learning database name: {name!r}")
 
 
 def _inventory(root: Path) -> list[CheckpointFile]:
