@@ -1,0 +1,15 @@
+schema_version: 1
+study_id: m11-lifetime-transfer-v1
+donor_model: scripted-donor-v1
+recipient_model: scripted-recipient-v2
+lifetime_days: 112
+season_length_days: 28
+seasons: [spring, summer, fall, winter]
+dormant_skill_min_gap_days: 84
+routing_budget_usd: 0.012
+transfer_conditions:
+  - raw_model
+  - fresh_recipient
+  - memories_only
+  - skills_only
+  - full_inheritance

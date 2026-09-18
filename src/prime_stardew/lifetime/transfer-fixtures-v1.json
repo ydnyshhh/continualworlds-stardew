@@ -1,0 +1,38 @@
+[
+  {
+    "schema_version": 1,
+    "task_id": "heldout-azure-melon-mulch-v1",
+    "kind": "knowledge",
+    "description": "Choose mulch for an Azure Melon with cool-colored waxy leaves.",
+    "query": "cool colored waxy crop mulch",
+    "required_artifact_id": "cool-crop-mulch-rule",
+    "contamination_terms": ["heldout-azure-melon-mulch-v1", "azure melon"]
+  },
+  {
+    "schema_version": 1,
+    "task_id": "heldout-ember-root-soil-v1",
+    "kind": "knowledge",
+    "description": "Choose soil treatment for an Ember Root in dry rocky soil.",
+    "query": "dry rocky root crop soil treatment",
+    "required_artifact_id": "rocky-root-soil-rule",
+    "contamination_terms": ["heldout-ember-root-soil-v1", "ember root"]
+  },
+  {
+    "schema_version": 1,
+    "task_id": "heldout-water-pumpkin-row-v1",
+    "kind": "procedure",
+    "description": "Water a six-tile Pumpkin row.",
+    "query": "water crop row safely",
+    "required_artifact_id": "tend-crop-row",
+    "contamination_terms": ["heldout-water-pumpkin-row-v1", "pumpkin row"]
+  },
+  {
+    "schema_version": 1,
+    "task_id": "heldout-water-yam-row-v1",
+    "kind": "procedure",
+    "description": "Water a nine-tile Yam row.",
+    "query": "water crop row safely",
+    "required_artifact_id": "tend-crop-row",
+    "contamination_terms": ["heldout-water-yam-row-v1", "yam row"]
+  }
+]
