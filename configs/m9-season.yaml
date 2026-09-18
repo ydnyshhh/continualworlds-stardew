@@ -1,0 +1,44 @@
+schema_version: 1
+suite: m9-spring-project-benchmark
+condition: full-harness
+seed: 406041616
+repetition: 1
+observation_mode: replay
+fixture:
+  save_id: M9SeasonReplay_1
+  player: PrimeStardewSmoke
+  starting_date: {year: 1, season: spring, day: 1}
+tasks:
+  - m9-harvest-cauliflower-reserve-v1
+  - m9-mine-40-copper-pickaxe-v1
+  - m9-coop-first-chicken-v1
+provider:
+  provider: scripted-season-policy
+  model: deterministic-project-policy-v1
+  route: deterministic-replay
+  decoding: {temperature: 0, top_p: 1, max_output_tokens: 256}
+context:
+  total_tokens: 4096
+  objective_tokens: 512
+  observation_tokens: 1024
+  goals_tokens: 512
+  memories_tokens: 768
+  skills_tokens: 768
+  recent_events_tokens: 512
+learning:
+  recent_context: true
+  persistent_memory: true
+  retrieval: true
+  skills: true
+  refinement: true
+budget:
+  max_actions: 5000
+  max_game_days: 28
+  max_model_calls: 100
+  max_input_tokens: 200000
+  max_output_tokens: 50000
+  max_cost_usd: 25
+  max_wall_seconds: 3600
+tags: [m9, spring, projects, 28-day, checkpoint-recovery]
+metadata:
+  - {key: environment, value: deterministic-season-replay-v1}

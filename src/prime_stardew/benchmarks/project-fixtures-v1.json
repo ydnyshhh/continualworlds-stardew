@@ -1,0 +1,30 @@
+[
+  {
+    "schema_version": 1,
+    "fixture_id": "m9-harvest-cauliflower-reserve-v1",
+    "kind": "cauliflower_reserve",
+    "description": "Harvest at least 10 cauliflower while retaining at least 1,500g.",
+    "horizon_days": 28,
+    "target_quantity": 10,
+    "minimum_gold": 1500
+  },
+  {
+    "schema_version": 1,
+    "fixture_id": "m9-mine-40-copper-pickaxe-v1",
+    "kind": "mine_pickaxe",
+    "description": "Reach mine level 40 and upgrade the pickaxe at least once.",
+    "horizon_days": 28,
+    "target_mine_level": 40,
+    "target_pickaxe_tier": 1
+  },
+  {
+    "schema_version": 1,
+    "fixture_id": "m9-coop-first-chicken-v1",
+    "kind": "coop_chicken",
+    "description": "Build a coop and obtain the first chicken.",
+    "horizon_days": 28,
+    "target_quantity": 1,
+    "required_building": "Coop",
+    "required_animal": "Chicken"
+  }
+]
