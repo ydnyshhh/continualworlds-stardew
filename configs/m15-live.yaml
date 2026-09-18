@@ -1,0 +1,41 @@
+schema_version: 1
+suite: m15-authenticated-stardew-shift
+condition: contextual-belief-selection
+seed: 406041616
+repetition: 1
+observation_mode: replay
+fixture:
+  save_id: synthetic-stardew-shift-v1
+  player: PrimeStardewSmoke
+  starting_date: {year: 1, season: spring, day: 8}
+tasks: [m15-contextualize-b-and-recover-a-v1]
+provider:
+  provider: openrouter
+  model: z-ai/glm-5.3
+  route: prime-agent-rpc
+  decoding: {temperature: 0, top_p: 1, max_output_tokens: 900}
+context:
+  total_tokens: 4096
+  objective_tokens: 512
+  observation_tokens: 1024
+  goals_tokens: 128
+  memories_tokens: 1024
+  skills_tokens: 0
+  recent_events_tokens: 256
+learning:
+  recent_context: true
+  persistent_memory: true
+  retrieval: true
+  skills: false
+  refinement: true
+budget:
+  max_actions: 9
+  max_game_days: 1
+  max_model_calls: 4
+  max_input_tokens: 12000
+  max_output_tokens: 3600
+  max_cost_usd: 2
+  max_wall_seconds: 900
+tags: [m15, stardew-shift, authenticated, glm-5.3]
+metadata:
+  - {key: benchmark, value: m15-context-selection-v1}

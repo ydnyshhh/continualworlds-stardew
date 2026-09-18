@@ -1,0 +1,35 @@
+schema_version: 1
+study_id: m15-stardew-shift-v1
+hypothesis: >-
+  Under matched seeded A-to-B-to-A mechanics, context-specific immutable beliefs improve immediate
+  retention when World A returns relative to a single globally overwritten belief, while adapting
+  to World B no slower than a fresh-at-B learner and without negative transfer.
+primary_metric: retention_after_return
+favorable_direction: higher
+paired: true
+seeds: [406041616, 406041617, 406041618, 406041619, 406041620, 406041621, 406041622, 406041623]
+conditions:
+  - frozen_a
+  - global_overwrite
+  - contextual_beliefs
+  - fresh_at_b
+trials_per_phase: 6
+stable_window: 2
+alpha: 0.05
+confidence_level: 0.95
+bootstrap_samples: 10000
+b_adaptation_noninferiority_margin: 0
+exclusions:
+  - malformed or hash-invalid event chain
+  - missing or duplicate terminal interaction event
+  - mismatched world, observation, or start-state hash within seed
+  - infrastructure failure before the first action
+stopping_rule: Execute every preregistered seed and condition exactly once; do not stop early.
+analysis_plan: >-
+  Pair contextual_beliefs and global_overwrite within seed for retention on the first shifted
+  mechanic interactions after World A returns. Compute the paired mean difference, deterministic
+  bootstrap 95 percent confidence interval, and exact two-sided sign test. Require the lower bound
+  to be positive and p below alpha. Compare World B adaptation lag and first-two-interaction regret
+  against fresh_at_b with zero noninferiority margin. Require context-specific revisions for every
+  shifted mechanic, perfect transfer on the unchanged mechanic, matched hashes, complete runs, and
+  no hidden optimal action in any decision input. Other metrics are descriptive.
