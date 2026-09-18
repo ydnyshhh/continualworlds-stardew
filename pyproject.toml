@@ -46,6 +46,8 @@ prime-stardew-m8-live = "prime_stardew.m8_live:main"
 prime-stardew-m9-gate = "prime_stardew.m9_gate:main"
 prime-stardew-m9-report = "prime_stardew.m9_report:main"
 
+prime-stardew-m10-gate = "prime_stardew.m10_gate:main"
+
 [project.optional-dependencies]
 dev = [
   "pytest>=8.3,<10",
@@ -57,6 +59,7 @@ testpaths = ["tests"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/prime_stardew"]
+
 
 
 

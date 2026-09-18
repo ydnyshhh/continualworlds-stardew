@@ -1,0 +1,36 @@
+schema_version: 1
+study_id: m10-proceduralization-gain-v1
+title: Procedural skill effect on season-level model decisions
+hypothesis: A validated watering procedure reduces model decisions without reducing project outcomes.
+environment: deterministic-season-replay-v1
+policy: deterministic-project-policy-v1
+primary_metric: model_decisions
+favorable_direction: lower
+paired: true
+seeds: [406041616, 406041617, 406041618, 406041619, 406041620, 406041621, 406041622, 406041623]
+max_days: 28
+alpha: 0.05
+confidence_level: 0.95
+bootstrap_samples: 10000
+outcome_noninferiority_margin: 0
+conditions:
+  - name: D-memory-retrieval
+    learning:
+      recent_context: true
+      persistent_memory: true
+      retrieval: true
+      skills: false
+      refinement: false
+  - name: E-memory-retrieval-skills
+    learning:
+      recent_context: true
+      persistent_memory: true
+      retrieval: true
+      skills: true
+      refinement: false
+exclusion_rules:
+  - Incomplete or non-contiguous 28-day event sequence.
+  - Event-chain corruption or preregistration/configuration hash mismatch.
+  - One or more invalid project actions.
+  - Provider or model fallback, revision, or manual environment input.
+analysis_plan: Pair runs by seed; estimate D decisions minus E decisions; use a deterministic paired bootstrap 95% confidence interval and an exact two-sided sign test; require a positive lower confidence bound, p below alpha, and no loss in mean project outcome.
