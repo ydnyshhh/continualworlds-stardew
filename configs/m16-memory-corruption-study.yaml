@@ -1,0 +1,20 @@
+schema_version: 1
+study_id: m16-memory-corruption-and-autonomous-repair-v1
+hypothesis: A restricted policy patch learned after one corruption episode improves held-out episode-two utility over the identical fixed repair policy without increasing repairs of clean memories.
+primary_metric: episode_2_utility_retained
+favorable_direction: higher
+paired: true
+seeds: [1601, 1602, 1603, 1604, 1605, 1606, 1607, 1608]
+conditions: [blind_trust, fixed_repair, adaptive_repair, oracle_repair]
+interactions_per_record: 4
+initial_verification_threshold: 2
+alpha: 0.05
+confidence_level: 0.95
+bootstrap_samples: 10000
+clean_false_repair_margin: 0
+exclusions:
+  - malformed or hash-invalid event log
+  - incomplete condition-seed run
+  - hidden evaluator field exposed before a decision
+stopping_rule: Run exactly the preregistered 32 condition-seed runs with no optional stopping.
+analysis_plan: Pair adaptive_repair and fixed_repair by seed, compare integer episode-two utility-retained percentages with a two-sided exact sign test and percentile bootstrap confidence interval, require matched episode-one performance and world/observable/start hashes, and audit clean-memory false repairs.

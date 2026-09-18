@@ -1,0 +1,41 @@
+schema_version: 1
+suite: m16-authenticated-memory-repair
+condition: autonomous-policy-repair
+seed: 406041616
+repetition: 1
+observation_mode: replay
+fixture:
+  save_id: synthetic-memory-corruption-v1
+  player: PrimeStardewSmoke
+  starting_date: {year: 1, season: spring, day: 9}
+tasks: [m16-detect-repair-and-transfer-v1]
+provider:
+  provider: openrouter
+  model: z-ai/glm-5.3
+  route: prime-agent-rpc
+  decoding: {temperature: 0, top_p: 1, max_output_tokens: 1400}
+context:
+  total_tokens: 8192
+  objective_tokens: 768
+  observation_tokens: 2048
+  goals_tokens: 256
+  memories_tokens: 2048
+  skills_tokens: 0
+  recent_events_tokens: 512
+learning:
+  recent_context: true
+  persistent_memory: true
+  retrieval: true
+  skills: false
+  refinement: true
+budget:
+  max_actions: 21
+  max_game_days: 1
+  max_model_calls: 30
+  max_input_tokens: 80000
+  max_output_tokens: 42000
+  max_cost_usd: 5
+  max_wall_seconds: 1800
+tags: [m16, memory-corruption, autonomous-repair, authenticated, glm-5.3]
+metadata:
+  - {key: benchmark, value: m16-hidden-corruption-v1}
